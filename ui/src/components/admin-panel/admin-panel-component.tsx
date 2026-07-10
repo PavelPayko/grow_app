@@ -1,12 +1,15 @@
 import { type FC } from 'react'
 
 import { type IMainProps } from './admin-panel-types'
-import { Flex, Table, type TableProps } from 'antd'
+import { Flex, Table, Tabs, type TableProps } from 'antd'
 import { fetchUsers } from 'core/api/users-api'
 import { useQuery } from '@tanstack/react-query'
 import type { IUser } from 'core/types/user'
 import { UpdateUser } from 'components/update-user'
 import { DeleteUser } from 'components/delete-user'
+import { CompetencyCatalog } from 'components/competency-catalog'
+import { TeamsAdmin } from 'components/teams-admin'
+import { AssessmentCyclesAdmin } from 'components/assessment-cycles-admin'
 
 export const AdminPanelComponent: FC<IMainProps> = () => {
     const { data: users, isPending, isFetching, isLoading, isRefetching } = useQuery({
@@ -75,5 +78,38 @@ export const AdminPanelComponent: FC<IMainProps> = () => {
         },
     ];
 
-    return <Table columns={columns} dataSource={users} loading={isFetching || isLoading || isPending || isRefetching} />
+    return (
+        <Tabs
+            defaultActiveKey='users'
+            items={[
+                {
+                    key: 'users',
+                    label: 'Пользователи',
+                    children: (
+                        <Table
+                            columns={columns}
+                            dataSource={users}
+                            loading={isFetching || isLoading || isPending || isRefetching}
+                            rowKey='id'
+                        />
+                    ),
+                },
+                {
+                    key: 'teams',
+                    label: 'Команды',
+                    children: <TeamsAdmin />,
+                },
+                {
+                    key: 'catalog',
+                    label: 'Каталог компетенций',
+                    children: <CompetencyCatalog />,
+                },
+                {
+                    key: 'cycles',
+                    label: 'Циклы оценки',
+                    children: <AssessmentCyclesAdmin />,
+                },
+            ]}
+        />
+    )
 }

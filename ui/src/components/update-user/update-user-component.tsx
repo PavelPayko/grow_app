@@ -12,9 +12,11 @@ import {
 } from 'antd'
 
 import { type IUpdateUserProps } from './update-user-types'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchTeams } from 'core/api/teams-api'
 import { instanceAxios } from 'core/api/axios'
 import type { IUserUpdate } from 'core/types/user'
+import { USER_GRADES, USER_GRADE_LABELS } from 'core/types/user'
 import type { AxiosError } from 'axios'
 
 
@@ -23,6 +25,12 @@ export const UpdateUserComponent: FC<IUpdateUserProps> = ({
 }) => {
     const queryClient = useQueryClient()
     const [isOpen, setIsOpen] = useState(false)
+
+    const { data: teams = [] } = useQuery({
+        queryKey: ['teams'],
+        queryFn: fetchTeams,
+        enabled: isOpen,
+    })
 
     const userMutation = useMutation({
         mutationFn: async (userData: IUserUpdate) => {
@@ -49,10 +57,19 @@ export const UpdateUserComponent: FC<IUpdateUserProps> = ({
     }
 
     const roleOptions: SelectProps['options'] = [
-        { value: 'admin,', label: 'Администратор' },
+        { value: 'admin', label: 'Администратор' },
         { value: 'user', label: 'Сотрудник' },
     ]
 
+    const teamOptions: SelectProps['options'] = teams.map((team) => ({
+        value: team.id,
+        label: team.name,
+    }))
+
+    const gradeOptions: SelectProps['options'] = USER_GRADES.map((grade) => ({
+        value: grade,
+        label: USER_GRADE_LABELS[grade],
+    }))
 
     return <>
         <Button onClick={openHandler} type='link'>Изменить</Button>
@@ -102,6 +119,23 @@ export const UpdateUserComponent: FC<IUpdateUserProps> = ({
                     label={'Роль'}
                 >
                     <Select options={roleOptions} />
+                </Form.Item>
+                <Form.Item
+                    name={'team_id'}
+                    label={'Команда'}
+                >
+                    <Select
+                        allowClear
+                        placeholder='Выберите команду'
+                        options={teamOptions}
+                    />
+                </Form.Item>
+                <Form.Item
+                    name={'grade'}
+                    label={'Грейд'}
+                    rules={[{ required: true, message: 'Выберите грейд' }]}
+                >
+                    <Select options={gradeOptions} />
                 </Form.Item>
 
                 {userMutation.isError &&

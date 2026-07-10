@@ -6,6 +6,7 @@ import { Points } from 'components/points'
 
 import { UserDashboard } from 'components/user-dashboard'
 import { MainDashboard } from 'components/main-dashboard'
+import { CompetencyMatrix } from 'components/competency-matrix'
 import type { IContentProps } from './content-types'
 
 export const ContentComponent: FC<IContentProps> = ({
@@ -25,6 +26,11 @@ export const ContentComponent: FC<IContentProps> = ({
             key: 'dashboard',
             label: 'Дашборд',
             children: <UserDashboard userId={userId || ''} />
+        },
+        {
+            key: 'matrix',
+            label: 'Матрица',
+            children: <CompetencyMatrix userId={userId || ''} />
         },
     ];
     const allTabs: TabsProps['items'] = [
