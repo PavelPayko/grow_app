@@ -55,6 +55,34 @@ npm run seed
 
 ## 6. Сборка и запуск
 
+На слабом сервере **не собирайте UI на сервере** — Vite/TypeScript требуют много RAM и CPU. Соберите фронтенд на своём компьютере и загрузите готовый `ui/dist` (см. раздел «Обновление» ниже).
+
+### Вариант A — слабый сервер (рекомендуется)
+
+На **локальной машине** (нужен Node.js 20+):
+
+```bash
+cd grow_app
+chmod +x deploy/publish.sh deploy/build-ui.sh
+DEPLOY_HOST=growapp@<server-ip> ./deploy/publish.sh
+```
+
+Скрипт `publish.sh`:
+- собирает `ui/dist` локально;
+- заливает `ui/dist` на сервер через `rsync`;
+- на сервере делает `git pull` и перезапускает API (`deploy.sh --skip-ui-build`).
+
+Первый раз на сервере только API (без сборки UI):
+
+```bash
+cd /opt/grow_app
+chmod +x deploy/deploy.sh
+mkdir -p ui/dist
+# затем с локальной машины: DEPLOY_HOST=... ./deploy/publish.sh
+```
+
+### Вариант B — мощный сервер
+
 ```bash
 cd /opt/grow_app
 chmod +x deploy/deploy.sh
@@ -62,8 +90,8 @@ chmod +x deploy/deploy.sh
 ```
 
 Скрипт:
-- ставит зависимости API и UI
-- собирает `ui/dist`
+- ставит зависимости API (и UI, если без `--skip-ui-build`);
+- собирает `ui/dist` (если не передан `--skip-ui-build`);
 - перезапускает API через PM2
 
 Автозапуск PM2 после перезагрузки сервера:
@@ -95,11 +123,37 @@ sudo certbot --nginx -d test.example.com
 
 ## 8. Обновление приложения
 
+### Слабый сервер — с локальной машины
+
+```bash
+cd grow_app
+DEPLOY_HOST=growapp@<server-ip> ./deploy/publish.sh
+```
+
+Переменные (опционально): `DEPLOY_PATH` (по умолчанию `/opt/grow_app`).
+
+Только пересобрать UI без деплоя:
+
+```bash
+./deploy/build-ui.sh
+rsync -avz --delete ui/dist/ growapp@<server-ip>:/opt/grow_app/ui/dist/
+```
+
+### Мощный сервер — всё на сервере
+
 ```bash
 cd /opt/grow_app
 git pull
 ./deploy/deploy.sh
 sudo systemctl reload nginx   # обычно не нужен, если менялся только код
+```
+
+### Только API (фронт не менялся)
+
+```bash
+cd /opt/grow_app
+git pull
+./deploy/deploy.sh --skip-ui-build
 ```
 
 ## Локальная разработка
