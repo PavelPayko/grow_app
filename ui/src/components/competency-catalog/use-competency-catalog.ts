@@ -3,18 +3,19 @@ import { useState } from 'react'
 import { message } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { fetchTeams } from 'core/api/teams-api'
 import {
-  cloneCatalog,
+  cloneCatalogById,
   createBlock,
+  createCatalog,
   createCompetency,
   createDomain,
-  createTeamCatalog,
   deleteBlock,
+  deleteCatalog,
   deleteCompetency,
   deleteDomain,
   deleteGradeTarget,
-  fetchTeamCatalog,
+  fetchCatalog,
+  fetchCatalogs,
   updateBlock,
   updateCompetency,
   updateDomain,
@@ -39,7 +40,7 @@ import type {
 
 export function useCompetencyCatalog() {
   const queryClient = useQueryClient()
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null)
 
   const [catalogModalOpen, setCatalogModalOpen] = useState(false)
   const [cloneModalOpen, setCloneModalOpen] = useState(false)
@@ -48,32 +49,34 @@ export function useCompetencyCatalog() {
   const [competencyModal, setCompetencyModal] = useState<CompetencyModalState>(null)
   const [gradeTargetModal, setGradeTargetModal] = useState<GradeTargetModalState>(null)
 
-  const { data: teams = [], isLoading: teamsLoading } = useQuery({
-    queryKey: ['teams'],
-    queryFn: fetchTeams,
+  const { data: catalogs = [], isLoading: catalogsLoading } = useQuery({
+    queryKey: ['catalogs'],
+    queryFn: fetchCatalogs,
   })
 
-  const activeTeamId = selectedTeamId || teams[0]?.id || null
+  const activeCatalogId = selectedCatalogId || catalogs[0]?.id || null
 
   const {
     data: catalogData,
     isLoading: catalogLoading,
     isFetching: catalogFetching,
   } = useQuery({
-    queryKey: ['teamCatalog', activeTeamId],
-    queryFn: () => fetchTeamCatalog(activeTeamId!),
-    enabled: Boolean(activeTeamId),
+    queryKey: ['catalog', activeCatalogId],
+    queryFn: () => fetchCatalog(activeCatalogId!),
+    enabled: Boolean(activeCatalogId),
   })
 
   const invalidateCatalog = () => {
-    queryClient.invalidateQueries({ queryKey: ['teamCatalog', activeTeamId] })
+    queryClient.invalidateQueries({ queryKey: ['catalog', activeCatalogId] })
+    queryClient.invalidateQueries({ queryKey: ['catalogs'] })
   }
 
   const createCatalogMutation = useMutation({
-    mutationFn: (values: ICatalogFormValues) => createTeamCatalog(activeTeamId!, values),
-    onSuccess: () => {
+    mutationFn: (values: ICatalogFormValues) => createCatalog(values),
+    onSuccess: (newCatalog) => {
       message.success('Каталог создан')
       setCatalogModalOpen(false)
+      setSelectedCatalogId(newCatalog.id)
       invalidateCatalog()
     },
     onError: (error) => message.error(getApiError(error)),
@@ -81,15 +84,28 @@ export function useCompetencyCatalog() {
 
   const cloneCatalogMutation = useMutation({
     mutationFn: (values: ICloneCatalogFormValues) =>
-      cloneCatalog({
-        source_team_id: values.source_team_id,
-        target_team_id: activeTeamId!,
+      cloneCatalogById(activeCatalogId!, {
         name: values.name?.trim() || undefined,
       }),
-    onSuccess: () => {
-      message.success('Каталог склонирован')
+    onSuccess: (newCatalog) => {
+      message.success('Каталог скопирован')
       setCloneModalOpen(false)
+      setSelectedCatalogId(newCatalog.id)
       invalidateCatalog()
+    },
+    onError: (error) => message.error(getApiError(error)),
+  })
+
+  const deleteCatalogMutation = useMutation({
+    mutationFn: () => deleteCatalog(activeCatalogId!),
+    onSuccess: () => {
+      message.success('Каталог удалён')
+      const remaining = catalogs.filter((item) => item.id !== activeCatalogId)
+      setSelectedCatalogId(remaining[0]?.id ?? null)
+      queryClient.invalidateQueries({ queryKey: ['catalogs'] })
+      if (activeCatalogId) {
+        queryClient.removeQueries({ queryKey: ['catalog', activeCatalogId] })
+      }
     },
     onError: (error) => message.error(getApiError(error)),
   })
@@ -193,9 +209,6 @@ export function useCompetencyCatalog() {
 
   const catalog = catalogData?.catalog ?? null
   const blocks = catalogData?.blocks ?? []
-  const sourceTeamOptions = teams
-    .filter((team) => team.id !== activeTeamId)
-    .map((team) => ({ value: team.id, label: team.name }))
 
   const gradeTargetBlock = gradeTargetModal
     ? blocks.find((block) => block.id === gradeTargetModal.blockId)
@@ -208,23 +221,24 @@ export function useCompetencyCatalog() {
   ).map((grade) => ({ value: grade, label: USER_GRADE_LABELS[grade] }))
 
   const isBusy =
+    catalogsLoading ||
     catalogLoading ||
     catalogFetching ||
     createCatalogMutation.isPending ||
     cloneCatalogMutation.isPending ||
+    deleteCatalogMutation.isPending ||
     blockMutation.isPending ||
     domainMutation.isPending ||
     competencyMutation.isPending ||
     gradeTargetMutation.isPending
 
   return {
-    teams,
-    teamsLoading,
-    activeTeamId,
-    setSelectedTeamId,
+    catalogs,
+    catalogsLoading,
+    activeCatalogId,
+    setSelectedCatalogId,
     catalog: catalog as ICompetencyCatalog | null,
     blocks,
-    sourceTeamOptions,
     isBusy,
     catalogModalOpen,
     setCatalogModalOpen,
@@ -241,6 +255,7 @@ export function useCompetencyCatalog() {
     gradeTargetOptions,
     createCatalogMutation,
     cloneCatalogMutation,
+    deleteCatalogMutation,
     blockMutation,
     domainMutation,
     competencyMutation,

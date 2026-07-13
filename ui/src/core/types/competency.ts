@@ -8,9 +8,7 @@ export type ITargetStatus = 'below' | 'in_range' | 'above' | null
 
 export interface ICompetencyCatalog {
   id: string
-  team_id: string
   name: string
-  is_active: boolean
   created_at: string
 }
 
@@ -177,12 +175,14 @@ export interface IImportResult {
 }
 
 export interface ICloneCatalogPayload {
-  source_team_id: string
-  target_team_id: string
   name?: string
 }
 
 export interface ICreateCatalogPayload {
+  name: string
+}
+
+export interface IUpdateCatalogPayload {
   name: string
 }
 
@@ -211,7 +211,6 @@ export interface IGradeTargetPayload {
 
 export interface ICreateCyclePayload {
   name: string
-  catalog_id: string
   start_date?: string | null
   end_date?: string | null
 }

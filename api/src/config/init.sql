@@ -56,15 +56,12 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS competency_catalogs (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  team_id       UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   name          TEXT NOT NULL,
-  is_active     BOOLEAN NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_competency_catalogs_one_active_per_team
-  ON competency_catalogs (team_id)
-  WHERE is_active = true;
+ALTER TABLE teams
+  ADD COLUMN IF NOT EXISTS catalog_id UUID REFERENCES competency_catalogs(id) ON DELETE RESTRICT;
 
 CREATE TABLE IF NOT EXISTS competency_blocks (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -2,7 +2,10 @@ const pool = require('../config/db')
 
 exports.getAllTeams = async () => {
   const result = await pool.query(
-    'SELECT id, name, created_at FROM teams ORDER BY name'
+    `SELECT t.id, t.name, t.catalog_id, t.created_at, c.name AS catalog_name
+     FROM teams t
+     LEFT JOIN competency_catalogs c ON c.id = t.catalog_id
+     ORDER BY t.name`
   )
   return result
 }
@@ -10,7 +13,10 @@ exports.getAllTeams = async () => {
 exports.getTeamById = async (params) => {
   const { id } = params
   const result = await pool.query(
-    'SELECT id, name, created_at FROM teams WHERE id = $1',
+    `SELECT t.id, t.name, t.catalog_id, t.created_at, c.name AS catalog_name
+     FROM teams t
+     LEFT JOIN competency_catalogs c ON c.id = t.catalog_id
+     WHERE t.id = $1`,
     [id]
   )
   return result
@@ -26,12 +32,38 @@ exports.createTeam = async (params) => {
 }
 
 exports.updateTeam = async (params) => {
-  const { id, name } = params
+  const { id, name, catalog_id } = params
+  const updates = []
+  const values = []
+  let paramIndex = 1
+
+  if (name !== undefined) {
+    updates.push(`name = $${paramIndex++}`)
+    values.push(name)
+  }
+
+  if (catalog_id !== undefined) {
+    updates.push(`catalog_id = $${paramIndex++}`)
+    values.push(catalog_id)
+  }
+
+  if (!updates.length) {
+    return exports.getTeamById({ id })
+  }
+
+  values.push(id)
   const result = await pool.query(
-    'UPDATE teams SET name = $1 WHERE id = $2 RETURNING id, name, created_at',
-    [name, id]
+    `UPDATE teams
+     SET ${updates.join(', ')}
+     WHERE id = $${paramIndex}`,
+    values
   )
-  return result
+
+  if (!result.rowCount) {
+    return result
+  }
+
+  return exports.getTeamById({ id })
 }
 
 exports.deleteTeam = async (params) => {

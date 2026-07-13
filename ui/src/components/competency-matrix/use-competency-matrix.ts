@@ -9,6 +9,8 @@ import {
   fetchUserMatrix,
   upsertUserAssessment,
 } from 'core/api/competency-assessment-api'
+import { fetchTeamCatalog } from 'core/api/competency-catalog-api'
+import { fetchTeams } from 'core/api/teams-api'
 import { fetchUsers } from 'core/api/users-api'
 import type { IAssessmentUpsertPayload } from 'core/types/competency'
 import type { IUser } from 'core/types/user'
@@ -39,8 +41,28 @@ export function useCompetencyMatrix(userId: string) {
     enabled: isAdmin,
   })
 
+  // Matrix loads catalog snapshot from the selected cycle (cycle.catalog_id).
+  // Team catalog binding (teams.catalog_id) is used when creating new cycles.
   const viewedUser = resolveViewedUser(userId, users)
   const teamId = viewedUser?.team_id ?? null
+
+  const { data: teams = [], isLoading: teamsLoading } = useQuery({
+    queryKey: ['teams'],
+    queryFn: fetchTeams,
+    enabled: isAdmin && Boolean(teamId),
+  })
+
+  const team = teams.find((item) => item.id === teamId) ?? null
+
+  const { data: teamCatalog, isLoading: teamCatalogLoading } = useQuery({
+    queryKey: ['teamCatalog', teamId],
+    queryFn: () => fetchTeamCatalog(teamId!),
+    enabled: !isAdmin && Boolean(teamId),
+    select: (data) => data.catalog,
+  })
+
+  const hasTeamCatalog = isAdmin ? Boolean(team?.catalog_id) : Boolean(teamCatalog)
+  const teamCatalogCheckLoading = isAdmin ? teamsLoading : teamCatalogLoading
 
   const { data: cycles = [], isLoading: cyclesLoading } = useQuery({
     queryKey: ['teamCycles', teamId],
@@ -96,6 +118,8 @@ export function useCompetencyMatrix(userId: string) {
     isAdmin,
     viewedUser,
     teamId,
+    hasTeamCatalog,
+    teamCatalogCheckLoading,
     cycles,
     cyclesLoading,
     activeCycle,

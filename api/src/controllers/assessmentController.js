@@ -5,8 +5,8 @@ const {
   createCycle,
   activateCycle,
   closeCycle,
-  validateCatalogForTeam,
 } = require('../services/assessmentCycleService')
+const { getTeamById } = require('../services/teamService')
 const {
   getAssessmentsByCycleAndUser,
   upsertAssessment,
@@ -31,6 +31,7 @@ function handleError(res, err) {
     CYCLE_NOT_WRITABLE: 403,
     INVALID_SCORE: 400,
     COMPETENCY_NOT_IN_CATALOG: 400,
+    CATALOG_TEAM_MISMATCH: 400,
     USER_NOT_IN_TEAM: 400,
     BLOCK_NOT_FOUND: 404,
   }
@@ -63,18 +64,22 @@ exports.getActiveTeamCycle = async (req, res) => {
 exports.createTeamCycle = async (req, res) => {
   const { teamId } = req.params
   const name = (req.body.name || '').trim()
-  const catalog_id = req.body.catalog_id
   const start_date = req.body.start_date || null
   const end_date = req.body.end_date || null
 
-  if (!name || !catalog_id) {
-    return res.status(400).json({ error: 'Укажите name и catalog_id' })
+  if (!name) {
+    return res.status(400).json({ error: 'Укажите name' })
   }
 
   try {
-    const isValid = await validateCatalogForTeam({ team_id: teamId, catalog_id })
-    if (!isValid) {
-      return res.status(400).json({ error: 'Каталог не принадлежит команде или не активен' })
+    const teamResult = await getTeamById({ id: teamId })
+    if (!teamResult.rowCount) {
+      return res.status(404).json({ error: 'Команда не найдена' })
+    }
+
+    const catalog_id = teamResult.rows[0].catalog_id
+    if (!catalog_id) {
+      return res.status(400).json({ error: 'У команде не назначен каталог' })
     }
 
     const result = await createCycle({

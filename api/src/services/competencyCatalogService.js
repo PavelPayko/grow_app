@@ -1,15 +1,42 @@
 const pool = require('../config/db')
 
+const CYCLE_STATUS_LABELS = {
+  draft: 'черновик',
+  active: 'активный',
+  closed: 'закрыт',
+}
+
+const DELETE_BLOCKERS_LIMIT = 5
+
+function formatExtraCount(total) {
+  if (total <= DELETE_BLOCKERS_LIMIT) {
+    return ''
+  }
+  return ` и ещё ${total - DELETE_BLOCKERS_LIMIT}`
+}
+
+function formatLinkedTeamNames(rows, total) {
+  const names = rows.map((row) => row.name).join(', ')
+  return `${names}${formatExtraCount(total)}`
+}
+
+function formatLinkedCycles(rows, total) {
+  const items = rows
+    .map((row) => {
+      const status = CYCLE_STATUS_LABELS[row.status] || row.status
+      return `«${row.name}» (${row.team_name}, ${status})`
+    })
+    .join(', ')
+  return `${items}${formatExtraCount(total)}`
+}
+
 // --- Catalogs ---
 
-exports.getActiveCatalogByTeamId = async (params) => {
-  const { team_id } = params
+exports.getAllCatalogs = async () => {
   const result = await pool.query(
-    `SELECT id, team_id, name, is_active, created_at
+    `SELECT id, name, created_at
      FROM competency_catalogs
-     WHERE team_id = $1 AND is_active = true
-     LIMIT 1`,
-    [team_id]
+     ORDER BY name`
   )
   return result
 }
@@ -17,7 +44,7 @@ exports.getActiveCatalogByTeamId = async (params) => {
 exports.getCatalogById = async (params) => {
   const { id } = params
   const result = await pool.query(
-    `SELECT id, team_id, name, is_active, created_at
+    `SELECT id, name, created_at
      FROM competency_catalogs
      WHERE id = $1`,
     [id]
@@ -26,13 +53,72 @@ exports.getCatalogById = async (params) => {
 }
 
 exports.createCatalog = async (params) => {
-  const { team_id, name, is_active = true } = params
+  const { name } = params
   const result = await pool.query(
-    `INSERT INTO competency_catalogs (team_id, name, is_active)
-     VALUES ($1, $2, $3)
-     RETURNING id, team_id, name, is_active, created_at`,
-    [team_id, name, is_active]
+    `INSERT INTO competency_catalogs (name)
+     VALUES ($1)
+     RETURNING id, name, created_at`,
+    [name]
   )
+  return result
+}
+
+exports.updateCatalog = async (params) => {
+  const { id, name } = params
+  const result = await pool.query(
+    `UPDATE competency_catalogs
+     SET name = $1
+     WHERE id = $2
+     RETURNING id, name, created_at`,
+    [name, id]
+  )
+  return result
+}
+
+exports.deleteCatalog = async (params) => {
+  const { id } = params
+
+  const catalog = await exports.getCatalogById({ id })
+  if (!catalog.rowCount) {
+    const error = new Error('Каталог не найден')
+    error.code = 'CATALOG_NOT_FOUND'
+    throw error
+  }
+
+  const linkedTeams = await pool.query(
+    `SELECT name
+     FROM teams
+     WHERE catalog_id = $1
+     ORDER BY name`,
+    [id]
+  )
+  if (linkedTeams.rowCount) {
+    const preview = linkedTeams.rows.slice(0, DELETE_BLOCKERS_LIMIT)
+    const error = new Error(
+      `Нельзя удалить каталог: привязан к командам — ${formatLinkedTeamNames(preview, linkedTeams.rowCount)}`
+    )
+    error.code = 'CATALOG_LINKED_TO_TEAMS'
+    throw error
+  }
+
+  const linkedCycles = await pool.query(
+    `SELECT ac.name, ac.status, t.name AS team_name
+     FROM assessment_cycles ac
+     JOIN teams t ON t.id = ac.team_id
+     WHERE ac.catalog_id = $1
+     ORDER BY ac.created_at DESC`,
+    [id]
+  )
+  if (linkedCycles.rowCount) {
+    const preview = linkedCycles.rows.slice(0, DELETE_BLOCKERS_LIMIT)
+    const error = new Error(
+      `Нельзя удалить каталог: используется в циклах — ${formatLinkedCycles(preview, linkedCycles.rowCount)}`
+    )
+    error.code = 'CATALOG_USED_IN_CYCLES'
+    throw error
+  }
+
+  const result = await pool.query('DELETE FROM competency_catalogs WHERE id = $1', [id])
   return result
 }
 
@@ -275,37 +361,18 @@ exports.deleteGradeTarget = async (params) => {
 
 exports.getFullCatalogByTeamId = async (params) => {
   const { team_id } = params
-  const catalogResult = await exports.getActiveCatalogByTeamId({ team_id })
+  const teamResult = await pool.query(
+    `SELECT catalog_id FROM teams WHERE id = $1`,
+    [team_id]
+  )
 
-  if (!catalogResult.rowCount) {
+  if (!teamResult.rowCount || !teamResult.rows[0].catalog_id) {
     return { catalog: null, blocks: [] }
   }
 
-  const catalog = catalogResult.rows[0]
-  const blocksResult = await exports.getBlocksByCatalogId({ catalog_id: catalog.id })
-  const blocks = []
-
-  for (const block of blocksResult.rows) {
-    const domainsResult = await exports.getDomainsByBlockId({ block_id: block.id })
-    const gradeTargetsResult = await exports.getGradeTargetsByBlockId({ block_id: block.id })
-    const domains = []
-
-    for (const domain of domainsResult.rows) {
-      const competenciesResult = await exports.getCompetenciesByDomainId({ domain_id: domain.id })
-      domains.push({
-        ...domain,
-        competencies: competenciesResult.rows,
-      })
-    }
-
-    blocks.push({
-      ...block,
-      grade_targets: gradeTargetsResult.rows,
-      domains,
-    })
-  }
-
-  return { catalog, blocks }
+  return exports.getFullCatalogByCatalogId({
+    catalog_id: teamResult.rows[0].catalog_id,
+  })
 }
 
 exports.getFullCatalogByCatalogId = async (params) => {
@@ -343,22 +410,20 @@ exports.getFullCatalogByCatalogId = async (params) => {
   return { catalog, blocks }
 }
 
-exports.cloneCatalog = async (params) => {
-  const { source_team_id, target_team_id, name } = params
+exports.cloneCatalogById = async (params) => {
+  const { source_catalog_id, name } = params
   const client = await pool.connect()
 
   try {
     await client.query('BEGIN')
 
     const sourceCatalogResult = await client.query(
-      `SELECT id, name FROM competency_catalogs
-       WHERE team_id = $1 AND is_active = true
-       LIMIT 1`,
-      [source_team_id]
+      `SELECT id, name FROM competency_catalogs WHERE id = $1`,
+      [source_catalog_id]
     )
 
     if (!sourceCatalogResult.rowCount) {
-      const error = new Error('Активный каталог исходной команды не найден')
+      const error = new Error('Исходный каталог не найден')
       error.code = 'SOURCE_CATALOG_NOT_FOUND'
       throw error
     }
@@ -366,17 +431,11 @@ exports.cloneCatalog = async (params) => {
     const sourceCatalog = sourceCatalogResult.rows[0]
     const catalogName = name || `${sourceCatalog.name} (копия)`
 
-    await client.query(
-      `UPDATE competency_catalogs SET is_active = false
-       WHERE team_id = $1 AND is_active = true`,
-      [target_team_id]
-    )
-
     const newCatalogResult = await client.query(
-      `INSERT INTO competency_catalogs (team_id, name, is_active)
-       VALUES ($1, $2, true)
-       RETURNING id, team_id, name, is_active, created_at`,
-      [target_team_id, catalogName]
+      `INSERT INTO competency_catalogs (name)
+       VALUES ($1)
+       RETURNING id, name, created_at`,
+      [catalogName]
     )
     const newCatalog = newCatalogResult.rows[0]
 

@@ -5,3 +5,8 @@ export interface ITeamsAdminProps {
 export interface ICreateTeamFormValues {
   name: string
 }
+
+export interface IEditTeamFormValues {
+  name: string
+  catalog_id?: string | null
+}

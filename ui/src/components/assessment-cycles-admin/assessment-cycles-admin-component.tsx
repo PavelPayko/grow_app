@@ -1,4 +1,4 @@
-import { useState, type FC } from 'react'
+import { useMemo, useState, type FC } from 'react'
 
 import {
   Alert,
@@ -27,7 +27,7 @@ import {
   createTeamCycle,
   fetchTeamCycles,
 } from 'core/api/competency-assessment-api'
-import { fetchTeamCatalog } from 'core/api/competency-catalog-api'
+import { fetchCatalogs } from 'core/api/competency-catalog-api'
 import { fetchTeams } from 'core/api/teams-api'
 import type { IAssessmentCycle } from 'core/types/competency'
 
@@ -56,13 +56,18 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
     queryFn: fetchTeams,
   })
 
-  const activeTeamId = selectedTeamId || teams[0]?.id || null
-
-  const { data: teamCatalog, isLoading: catalogLoading } = useQuery({
-    queryKey: ['teamCatalog', activeTeamId],
-    queryFn: () => fetchTeamCatalog(activeTeamId!),
-    enabled: Boolean(activeTeamId),
+  const { data: catalogs = [] } = useQuery({
+    queryKey: ['catalogs'],
+    queryFn: fetchCatalogs,
   })
+
+  const catalogNameById = useMemo(
+    () => new Map(catalogs.map((catalog) => [catalog.id, catalog.name])),
+    [catalogs]
+  )
+
+  const activeTeamId = selectedTeamId || teams[0]?.id || null
+  const activeTeam = teams.find((team) => team.id === activeTeamId) ?? null
 
   const {
     data: cycles = [],
@@ -80,13 +85,12 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
   }
 
   const createCycleMutation = useMutation({
-    mutationFn: (values: {
-      name: string
-      catalog_id: string
-      start_date?: string | null
-      end_date?: string | null
-    }) =>
-      createTeamCycle(activeTeamId!, values),
+    mutationFn: (values: ICreateCycleFormValues) =>
+      createTeamCycle(activeTeamId!, {
+        name: values.name.trim(),
+        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : null,
+        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : null,
+      }),
     onSuccess: () => {
       message.success('Цикл создан')
       setIsCreateOpen(false)
@@ -113,14 +117,23 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
     onError: (error) => message.error(getApiError(error)),
   })
 
-  const catalog = teamCatalog?.catalog
-  const hasCatalog = Boolean(catalog)
+  const hasCatalog = Boolean(activeTeam?.catalog_id)
 
   const columns: TableProps<IAssessmentCycle>['columns'] = [
     {
       title: 'Название',
       dataIndex: 'name',
       key: 'name',
+    },
+    {
+      title: 'Каталог',
+      key: 'catalog',
+      render: (_, record) => catalogNameById.get(record.catalog_id) ?? '—',
+      sorter: (a, b) =>
+        (catalogNameById.get(a.catalog_id) || '').localeCompare(
+          catalogNameById.get(b.catalog_id) || '',
+          'ru'
+        ),
     },
     {
       title: 'Статус',
@@ -205,12 +218,12 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
         </Button>
       </Flex>
 
-      {!hasCatalog && activeTeamId && !catalogLoading && (
+      {!hasCatalog && activeTeamId && !teamsLoading && (
         <Alert
           type='warning'
           showIcon
-          message='У команды нет активного каталога'
-          description='Сначала создайте каталог на вкладке «Каталог компетенций».'
+          message='У команды не назначен каталог'
+          description='Назначьте каталог на вкладке «Команды».'
         />
       )}
 
@@ -218,7 +231,7 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
         rowKey='id'
         columns={columns}
         dataSource={cycles}
-        loading={cyclesLoading || cyclesFetching || catalogLoading}
+        loading={cyclesLoading || cyclesFetching}
         locale={{ emptyText: 'Циклы оценки не найдены' }}
       />
 
@@ -237,24 +250,11 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
           name='create-cycle'
           layout='vertical'
           clearOnDestroy
-          onFinish={(values) => {
-            createCycleMutation.mutate({
-              name: values.name.trim(),
-              catalog_id: catalog!.id,
-              start_date: values.start_date
-                ? values.start_date.format('YYYY-MM-DD')
-                : null,
-              end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : null,
-            })
-          }}
-          initialValues={{ catalog_id: catalog?.id }}
+          onFinish={(values) => createCycleMutation.mutate(values)}
         >
-          <Form.Item name='catalog_id' hidden>
-            <Input />
-          </Form.Item>
-          {catalog && (
+          {activeTeam?.catalog_name && (
             <Typography.Paragraph type='secondary'>
-              Каталог: {catalog.name}
+              Каталог команды: {activeTeam.catalog_name}
             </Typography.Paragraph>
           )}
           <Form.Item

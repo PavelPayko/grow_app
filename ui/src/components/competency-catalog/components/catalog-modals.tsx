@@ -20,7 +20,6 @@ import type {
 
 interface CatalogModalsProps {
   catalog: ICompetencyCatalog | null
-  sourceTeamOptions: { value: string; label: string }[]
   gradeTargetOptions: { value: string; label: string }[]
   catalogModalOpen: boolean
   cloneModalOpen: boolean
@@ -44,7 +43,6 @@ interface CatalogModalsProps {
 
 export const CatalogModals: FC<CatalogModalsProps> = ({
   catalog,
-  sourceTeamOptions,
   gradeTargetOptions,
   catalogModalOpen,
   cloneModalOpen,
@@ -94,7 +92,7 @@ export const CatalogModals: FC<CatalogModalsProps> = ({
     </Modal>
 
     <Modal
-      title='Клонировать каталог'
+      title='Дублировать каталог'
       open={cloneModalOpen}
       onCancel={onCloseClone}
       okButtonProps={{
@@ -110,17 +108,10 @@ export const CatalogModals: FC<CatalogModalsProps> = ({
         onFinish={(values) => cloneCatalogMutation.mutate(values)}
       >
         {catalog && (
-          <Typography.Paragraph type='warning'>
-            Текущий каталог команды будет деактивирован и заменён копией.
+          <Typography.Paragraph type='secondary'>
+            Будет создан новый независимый каталог на основе «{catalog.name}».
           </Typography.Paragraph>
         )}
-        <Form.Item
-          name='source_team_id'
-          label='Исходная команда'
-          rules={[{ required: true, message: 'Выберите команду-источник' }]}
-        >
-          <Select placeholder='Выберите команду' options={sourceTeamOptions} />
-        </Form.Item>
         <Form.Item
           name='name'
           label='Название нового каталога'

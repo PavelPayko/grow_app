@@ -1,7 +1,11 @@
 const {
-  cloneCatalog,
+  cloneCatalogById,
+  getAllCatalogs,
   getFullCatalogByTeamId,
+  getFullCatalogByCatalogId,
   createCatalog,
+  updateCatalog,
+  deleteCatalog,
   createBlock,
   updateBlock,
   deleteBlock,
@@ -13,7 +17,6 @@ const {
   deleteCompetency,
   upsertGradeTarget,
   deleteGradeTarget,
-  getActiveCatalogByTeamId,
 } = require('../services/competencyCatalogService')
 
 const VALID_GRADES = ['junior', 'middle', 'senior']
@@ -25,6 +28,12 @@ function handleError(res, err) {
   if (err.code === 'COMPETENCY_HAS_ASSESSMENTS') {
     return res.status(409).json({ error: err.message })
   }
+  if (err.code === 'CATALOG_NOT_FOUND') {
+    return res.status(404).json({ error: err.message })
+  }
+  if (err.code === 'CATALOG_LINKED_TO_TEAMS' || err.code === 'CATALOG_USED_IN_CYCLES') {
+    return res.status(409).json({ error: err.message })
+  }
   if (err.code === '23505') {
     return res.status(409).json({ error: 'Запись с такими параметрами уже существует' })
   }
@@ -34,18 +43,16 @@ function handleError(res, err) {
   return res.status(500).json({ error: err.message })
 }
 
-exports.getTeamCatalog = async (req, res) => {
+exports.listCatalogs = async (req, res) => {
   try {
-    const { teamId } = req.params
-    const data = await getFullCatalogByTeamId({ team_id: teamId })
-    res.status(200).json(data)
+    const result = await getAllCatalogs()
+    res.status(200).json(result.rows)
   } catch (err) {
     handleError(res, err)
   }
 }
 
-exports.createTeamCatalog = async (req, res) => {
-  const { teamId } = req.params
+exports.createCatalog = async (req, res) => {
   const name = (req.body.name || '').trim()
 
   if (!name) {
@@ -53,38 +60,81 @@ exports.createTeamCatalog = async (req, res) => {
   }
 
   try {
-    const existing = await getActiveCatalogByTeamId({ team_id: teamId })
-    if (existing.rowCount) {
-      return res.status(409).json({ error: 'У команды уже есть активный каталог' })
-    }
-
-    const result = await createCatalog({ team_id: teamId, name, is_active: true })
+    const result = await createCatalog({ name })
     res.status(201).json(result.rows[0])
   } catch (err) {
     handleError(res, err)
   }
 }
 
-exports.cloneCatalog = async (req, res) => {
-  const source_team_id = req.body.source_team_id
-  const target_team_id = req.body.target_team_id
-  const name = req.body.name
+exports.getCatalog = async (req, res) => {
+  try {
+    const { catalogId } = req.params
+    const data = await getFullCatalogByCatalogId({ catalog_id: catalogId })
 
-  if (!source_team_id || !target_team_id) {
-    return res.status(400).json({
-      error: 'Укажите source_team_id и target_team_id',
-    })
+    if (!data.catalog) {
+      return res.status(404).json({ error: 'Каталог не найден' })
+    }
+
+    res.status(200).json(data)
+  } catch (err) {
+    handleError(res, err)
   }
+}
 
-  if (source_team_id === target_team_id) {
-    return res.status(400).json({
-      error: 'Исходная и целевая команда должны отличаться',
-    })
+exports.updateCatalog = async (req, res) => {
+  const { catalogId } = req.params
+  const name = (req.body.name || '').trim()
+
+  if (!name) {
+    return res.status(400).json({ error: 'Название каталога обязательно' })
   }
 
   try {
-    const result = await cloneCatalog({ source_team_id, target_team_id, name })
+    const result = await updateCatalog({ id: catalogId, name })
+    if (!result.rowCount) {
+      return res.status(404).json({ error: 'Каталог не найден' })
+    }
+    res.status(200).json(result.rows[0])
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.deleteCatalog = async (req, res) => {
+  const { catalogId } = req.params
+
+  try {
+    const result = await deleteCatalog({ id: catalogId })
+    if (!result.rowCount) {
+      return res.status(404).json({ error: 'Каталог не найден' })
+    }
+    res.status(204).send()
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.cloneCatalogById = async (req, res) => {
+  const { catalogId } = req.params
+  const name = req.body.name
+
+  try {
+    const result = await cloneCatalogById({
+      source_catalog_id: catalogId,
+      name: name ? String(name).trim() : undefined,
+    })
     res.status(201).json(result.rows[0])
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+exports.getTeamCatalog = async (req, res) => {
+  try {
+    const { teamId } = req.params
+    const data = await getFullCatalogByTeamId({ team_id: teamId })
+    res.status(200).json(data)
   } catch (err) {
     handleError(res, err)
   }

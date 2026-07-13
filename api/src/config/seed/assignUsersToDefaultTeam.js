@@ -1,4 +1,4 @@
-const { DEFAULT_TEAM_NAME } = require('./competencyCatalogSeed')
+const { DEFAULT_TEAM_NAME } = require('./defaultTeam')
 
 async function assignUsersToDefaultTeam(client) {
   const teamResult = await client.query(

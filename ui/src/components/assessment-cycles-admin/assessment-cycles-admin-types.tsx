@@ -8,7 +8,6 @@ export interface IAssessmentCyclesAdminProps {
 
 export interface ICreateCycleFormValues {
   name: string
-  catalog_id: string
   start_date?: Dayjs | null
   end_date?: Dayjs | null
 }

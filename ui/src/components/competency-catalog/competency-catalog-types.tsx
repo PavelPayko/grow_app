@@ -32,7 +32,6 @@ export interface ICatalogFormValues {
 }
 
 export interface ICloneCatalogFormValues {
-  source_team_id: string
   name?: string
 }
 

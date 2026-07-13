@@ -1,34 +1,28 @@
 const pool = require('./src/config/db')
+const { DEFAULT_TEAM_NAME } = require('./src/config/seed/defaultTeam')
 const {
-  DEFAULT_TEAM_NAME,
-  DEFAULT_CATALOG_NAME,
-  GRADE_TARGETS,
-  COMPETENCIES,
-} = require('./src/config/seed/competencyCatalogSeed')
+  NAC_CATALOG_NAME,
+  NAC_GRADE_TARGETS,
+  NAC_COMPETENCIES,
+} = require('./src/config/seed/catalogs/nac')
 const { assignUsersToDefaultTeam } = require('./src/config/seed/assignUsersToDefaultTeam')
 
-async function seedCompetencyCatalog(client) {
-  const existingTeam = await client.query(
-    'SELECT id FROM teams WHERE name = $1',
-    [DEFAULT_TEAM_NAME]
+async function seedCatalog(client, { catalogName, gradeTargets, competencies }) {
+  const existingCatalog = await client.query(
+    'SELECT id FROM competency_catalogs WHERE name = $1',
+    [catalogName]
   )
 
-  if (existingTeam.rows.length > 0) {
-    console.log(`Команда "${DEFAULT_TEAM_NAME}" уже существует — seed пропущен`)
-    return existingTeam.rows[0].id
+  if (existingCatalog.rows.length > 0) {
+    console.log(`Каталог "${catalogName}" уже существует — seed пропущен`)
+    return existingCatalog.rows[0].id
   }
 
-  const teamResult = await client.query(
-    'INSERT INTO teams (name) VALUES ($1) RETURNING id',
-    [DEFAULT_TEAM_NAME]
-  )
-  const teamId = teamResult.rows[0].id
-
   const catalogResult = await client.query(
-    `INSERT INTO competency_catalogs (team_id, name, is_active)
-     VALUES ($1, $2, true)
+    `INSERT INTO competency_catalogs (name)
+     VALUES ($1)
      RETURNING id`,
-    [teamId, DEFAULT_CATALOG_NAME]
+    [catalogName]
   )
   const catalogId = catalogResult.rows[0].id
 
@@ -36,7 +30,7 @@ async function seedCompetencyCatalog(client) {
   const domainKeys = new Map()
   const blockIds = new Map()
 
-  for (const item of COMPETENCIES) {
+  for (const item of competencies) {
     if (!blockOrder.includes(item.block)) {
       blockOrder.push(item.block)
     }
@@ -53,7 +47,7 @@ async function seedCompetencyCatalog(client) {
     )
     blockIds.set(blockName, blockResult.rows[0].id)
 
-    const targets = GRADE_TARGETS[blockName]
+    const targets = gradeTargets[blockName]
     if (targets) {
       for (const [grade, [minScore, maxScore]] of Object.entries(targets)) {
         await client.query(
@@ -92,7 +86,7 @@ async function seedCompetencyCatalog(client) {
   }
 
   const competencyCountByBlock = new Map()
-  for (const item of COMPETENCIES) {
+  for (const item of competencies) {
     const key = `${item.block}::${item.domain}`
     const domainId = domainIds.get(key)
     const sortOrder = competencyCountByBlock.get(key) || 0
@@ -105,15 +99,56 @@ async function seedCompetencyCatalog(client) {
     )
   }
 
-  console.log(`Seed выполнен: команда "${DEFAULT_TEAM_NAME}", ${COMPETENCIES.length} компетенций, ${blockOrder.length} блоков`)
+  console.log(
+    `Каталог "${catalogName}": ${competencies.length} компетенций, ${blockOrder.length} блоков`
+  )
+  return catalogId
+}
+
+async function linkCatalogToTeam(client, teamName, catalogId) {
+  const teamRow = await client.query(
+    'SELECT id, catalog_id FROM teams WHERE name = $1',
+    [teamName]
+  )
+
+  let teamId
+  if (teamRow.rows.length > 0) {
+    teamId = teamRow.rows[0].id
+    if (teamRow.rows[0].catalog_id) {
+      console.log(`Команда "${teamName}" уже привязана к каталогу — привязка пропущена`)
+      return teamId
+    }
+  } else {
+    const teamResult = await client.query(
+      'INSERT INTO teams (name) VALUES ($1) RETURNING id',
+      [teamName]
+    )
+    teamId = teamResult.rows[0].id
+  }
+
+  await client.query(
+    'UPDATE teams SET catalog_id = $1 WHERE id = $2',
+    [catalogId, teamId]
+  )
+
+  console.log(`Команда "${teamName}" привязана к каталогу`)
   return teamId
+}
+
+async function seedNacCatalogForDefaultTeam(client) {
+  const catalogId = await seedCatalog(client, {
+    catalogName: NAC_CATALOG_NAME,
+    gradeTargets: NAC_GRADE_TARGETS,
+    competencies: NAC_COMPETENCIES,
+  })
+  return linkCatalogToTeam(client, DEFAULT_TEAM_NAME, catalogId)
 }
 
 ;(async () => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await seedCompetencyCatalog(client)
+    await seedNacCatalogForDefaultTeam(client)
     await assignUsersToDefaultTeam(client)
     await client.query('COMMIT')
   } catch (err) {
@@ -126,4 +161,9 @@ async function seedCompetencyCatalog(client) {
   }
 })()
 
-module.exports = { seedCompetencyCatalog, assignUsersToDefaultTeam }
+module.exports = {
+  seedCatalog,
+  linkCatalogToTeam,
+  seedNacCatalogForDefaultTeam,
+  assignUsersToDefaultTeam,
+}

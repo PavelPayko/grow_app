@@ -11,29 +11,55 @@ import type {
   IGradeTarget,
   IGradeTargetPayload,
   ITeamCatalog,
+  IUpdateCatalogPayload,
 } from 'core/types/competency'
 import { instanceAxios } from './axios'
 
-export const fetchTeamCatalog = async (teamId: string): Promise<ITeamCatalog> => {
-  const response = await instanceAxios.get<ITeamCatalog>(`/api/teams/${teamId}/catalog`)
+export const fetchCatalogs = async (): Promise<ICompetencyCatalog[]> => {
+  const response = await instanceAxios.get<ICompetencyCatalog[]>('/api/catalogs')
   return response.data
 }
 
-export const createTeamCatalog = async (
-  teamId: string,
+export const fetchCatalog = async (catalogId: string): Promise<ITeamCatalog> => {
+  const response = await instanceAxios.get<ITeamCatalog>(`/api/catalogs/${catalogId}`)
+  return response.data
+}
+
+export const createCatalog = async (
   payload: ICreateCatalogPayload
 ): Promise<ICompetencyCatalog> => {
-  const response = await instanceAxios.post<ICompetencyCatalog>(
-    `/api/teams/${teamId}/catalogs`,
+  const response = await instanceAxios.post<ICompetencyCatalog>('/api/catalogs', payload)
+  return response.data
+}
+
+export const updateCatalog = async (
+  catalogId: string,
+  payload: IUpdateCatalogPayload
+): Promise<ICompetencyCatalog> => {
+  const response = await instanceAxios.patch<ICompetencyCatalog>(
+    `/api/catalogs/${catalogId}`,
     payload
   )
   return response.data
 }
 
-export const cloneCatalog = async (
-  payload: ICloneCatalogPayload
+export const deleteCatalog = async (catalogId: string): Promise<void> => {
+  await instanceAxios.delete(`/api/catalogs/${catalogId}`)
+}
+
+export const cloneCatalogById = async (
+  catalogId: string,
+  payload?: ICloneCatalogPayload
 ): Promise<ICompetencyCatalog> => {
-  const response = await instanceAxios.post<ICompetencyCatalog>('/api/catalogs/clone', payload)
+  const response = await instanceAxios.post<ICompetencyCatalog>(
+    `/api/catalogs/${catalogId}/clone`,
+    payload ?? {}
+  )
+  return response.data
+}
+
+export const fetchTeamCatalog = async (teamId: string): Promise<ITeamCatalog> => {
+  const response = await instanceAxios.get<ITeamCatalog>(`/api/teams/${teamId}/catalog`)
   return response.data
 }
 

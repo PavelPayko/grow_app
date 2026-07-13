@@ -1,49 +1,59 @@
 import type { FC } from 'react'
 
-import { Button, Flex, Select, Typography } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
+import { Button, Flex, Popconfirm, Select, Typography } from 'antd'
+import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 
 import type { ICompetencyCatalog } from 'core/types/competency'
-import type { ITeam } from 'core/types/user'
 
 interface CatalogToolbarProps {
-  teams: ITeam[]
-  teamsLoading: boolean
-  activeTeamId: string | null
-  catalog: ICompetencyCatalog | null
-  sourceTeamOptions: { value: string; label: string }[]
-  onTeamChange: (teamId: string) => void
+  catalogs: ICompetencyCatalog[]
+  catalogsLoading: boolean
+  activeCatalogId: string | null
+  deletePending: boolean
+  onCatalogChange: (catalogId: string) => void
+  onCreateClick: () => void
   onCloneClick: () => void
+  onDeleteClick: () => void
 }
 
 export const CatalogToolbar: FC<CatalogToolbarProps> = ({
-  teams,
-  teamsLoading,
-  activeTeamId,
-  catalog,
-  sourceTeamOptions,
-  onTeamChange,
+  catalogs,
+  catalogsLoading,
+  activeCatalogId,
+  deletePending,
+  onCatalogChange,
+  onCreateClick,
   onCloneClick,
+  onDeleteClick,
 }) => (
   <Flex gap={16} align='center' wrap='wrap'>
-    <Typography.Text strong>Команда:</Typography.Text>
+    <Typography.Text strong>Каталог:</Typography.Text>
     <Select
       style={{ minWidth: 240 }}
-      loading={teamsLoading}
-      value={activeTeamId}
-      onChange={onTeamChange}
-      options={teams.map((team) => ({ value: team.id, label: team.name }))}
-      placeholder='Выберите команду'
+      loading={catalogsLoading}
+      value={activeCatalogId}
+      onChange={onCatalogChange}
+      options={catalogs.map((item) => ({ value: item.id, label: item.name }))}
+      placeholder='Выберите каталог'
     />
-    {catalog && (
-      <Typography.Text type='secondary'>Каталог: {catalog.name}</Typography.Text>
-    )}
-    <Button
-      icon={<CopyOutlined />}
-      disabled={!activeTeamId || sourceTeamOptions.length === 0}
-      onClick={onCloneClick}
-    >
-      Клонировать из другой команды
+    <Button icon={<PlusOutlined />} onClick={onCreateClick}>
+      Создать каталог
     </Button>
+    <Button icon={<CopyOutlined />} disabled={!activeCatalogId} onClick={onCloneClick}>
+      Дублировать
+    </Button>
+    <Popconfirm
+      title='Удалить каталог?'
+      description='Каталог можно удалить только если он не привязан к командам и не использовался в циклах оценки.'
+      okText='Удалить'
+      cancelText='Отмена'
+      okButtonProps={{ danger: true, loading: deletePending }}
+      disabled={!activeCatalogId}
+      onConfirm={onDeleteClick}
+    >
+      <Button danger icon={<DeleteOutlined />} disabled={!activeCatalogId}>
+        Удалить
+      </Button>
+    </Popconfirm>
   </Flex>
 )

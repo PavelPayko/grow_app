@@ -24,7 +24,11 @@ export const CompetencyMatrixComponent: FC<ICompetencyMatrixProps> = ({ userId }
     }
   }
 
-  const isBusy = matrix.cyclesLoading || matrix.matrixLoading || matrix.matrixFetching
+  const isBusy =
+    matrix.teamCatalogCheckLoading ||
+    matrix.cyclesLoading ||
+    matrix.matrixLoading ||
+    matrix.matrixFetching
 
   if (!matrix.viewedUser) {
     return <Empty description='Пользователь не найден' />
@@ -37,6 +41,21 @@ export const CompetencyMatrixComponent: FC<ICompetencyMatrixProps> = ({ userId }
         showIcon
         message='У пользователя не назначена команда'
         description='Назначьте команду в настройках пользователя, чтобы открыть матрицу компетенций.'
+      />
+    )
+  }
+
+  if (!matrix.teamCatalogCheckLoading && !matrix.hasTeamCatalog) {
+    return (
+      <Alert
+        type='warning'
+        showIcon
+        message='У команды не назначен каталог'
+        description={
+          matrix.isAdmin
+            ? 'Назначьте каталог на вкладке «Команды».'
+            : 'Обратитесь к администратору для назначения каталога команде.'
+        }
       />
     )
   }

@@ -44,26 +44,24 @@ export const CompetencyCatalogComponent: FC<ICompetencyCatalogProps> = () => {
       catalog.deleteGradeTargetMutation.mutate(targetId),
   }
 
+  const hasCatalogs = catalog.catalogs.length > 0
+
   return (
     <Flex vertical gap={16}>
       <CatalogToolbar
-        teams={catalog.teams}
-        teamsLoading={catalog.teamsLoading}
-        activeTeamId={catalog.activeTeamId}
-        catalog={catalog.catalog}
-        sourceTeamOptions={catalog.sourceTeamOptions}
-        onTeamChange={catalog.setSelectedTeamId}
+        catalogs={catalog.catalogs}
+        catalogsLoading={catalog.catalogsLoading}
+        activeCatalogId={catalog.activeCatalogId}
+        deletePending={catalog.deleteCatalogMutation.isPending}
+        onCatalogChange={catalog.setSelectedCatalogId}
+        onCreateClick={() => catalog.setCatalogModalOpen(true)}
         onCloneClick={() => catalog.setCloneModalOpen(true)}
+        onDeleteClick={() => catalog.deleteCatalogMutation.mutate()}
       />
 
       <Spin spinning={catalog.isBusy}>
-        {!catalog.catalog ? (
-          <CatalogEmptyState
-            activeTeamId={catalog.activeTeamId}
-            canClone={catalog.sourceTeamOptions.length > 0}
-            onCreateCatalog={() => catalog.setCatalogModalOpen(true)}
-            onClone={() => catalog.setCloneModalOpen(true)}
-          />
+        {!hasCatalogs ? (
+          <CatalogEmptyState onCreateCatalog={() => catalog.setCatalogModalOpen(true)} />
         ) : (
           <CatalogBlocksView
             blocks={catalog.blocks}
@@ -75,7 +73,6 @@ export const CompetencyCatalogComponent: FC<ICompetencyCatalogProps> = () => {
 
       <CatalogModals
         catalog={catalog.catalog}
-        sourceTeamOptions={catalog.sourceTeamOptions}
         gradeTargetOptions={catalog.gradeTargetOptions}
         catalogModalOpen={catalog.catalogModalOpen}
         cloneModalOpen={catalog.cloneModalOpen}

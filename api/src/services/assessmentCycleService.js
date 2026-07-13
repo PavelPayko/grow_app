@@ -87,7 +87,7 @@ exports.activateCycle = async (params) => {
     await client.query('BEGIN')
 
     const cycleResult = await client.query(
-      `SELECT id, team_id, status FROM assessment_cycles WHERE id = $1 FOR UPDATE`,
+      `SELECT id, team_id, catalog_id, status FROM assessment_cycles WHERE id = $1 FOR UPDATE`,
       [id]
     )
 
@@ -108,6 +108,17 @@ exports.activateCycle = async (params) => {
     if (cycle.status === 'active') {
       const error = new Error('Цикл уже активен')
       error.code = 'CYCLE_ALREADY_ACTIVE'
+      throw error
+    }
+
+    const catalogValid = await exports.validateCatalogForTeam({
+      team_id: cycle.team_id,
+      catalog_id: cycle.catalog_id,
+    })
+
+    if (!catalogValid) {
+      const error = new Error('Каталог цикла не соответствует каталогу команды')
+      error.code = 'CATALOG_TEAM_MISMATCH'
       throw error
     }
 
@@ -164,9 +175,13 @@ exports.closeCycle = async (params) => {
 exports.validateCatalogForTeam = async (params) => {
   const { team_id, catalog_id } = params
   const result = await pool.query(
-    `SELECT id FROM competency_catalogs
-     WHERE id = $1 AND team_id = $2 AND is_active = true`,
-    [catalog_id, team_id]
+    `SELECT catalog_id FROM teams WHERE id = $1`,
+    [team_id]
   )
-  return result.rowCount > 0
+
+  if (!result.rowCount) {
+    return false
+  }
+
+  return result.rows[0].catalog_id === catalog_id
 }

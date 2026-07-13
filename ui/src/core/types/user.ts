@@ -46,5 +46,12 @@ export interface IUserUpdate {
 export interface ITeam {
   id: string
   name: string
+  catalog_id?: string | null
+  catalog_name?: string | null
   created_at: string
+}
+
+export interface IUpdateTeamPayload {
+  name?: string
+  catalog_id?: string | null
 }

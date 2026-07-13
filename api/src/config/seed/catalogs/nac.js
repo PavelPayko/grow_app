@@ -1,11 +1,11 @@
 /**
- * Default competency catalog from Матрица_оценки_компетенций.xlsx
+ * NAC competency catalog (Матрица_оценки_компетенций.xlsx).
+ * Добавляйте другие каталоги рядом: seed/catalogs/<name>.js
  */
 
-const DEFAULT_TEAM_NAME = 'Default Team'
-const DEFAULT_CATALOG_NAME = 'Competency Matrix'
+const NAC_CATALOG_NAME = 'NAC'
 
-const GRADE_TARGETS = {
+const NAC_GRADE_TARGETS = {
   'NAC Core': {
     junior: [0.7, 1.4],
     middle: [1.5, 2.2],
@@ -33,7 +33,7 @@ const GRADE_TARGETS = {
   },
 }
 
-const COMPETENCIES = [
+const NAC_COMPETENCIES = [
   { block: 'NAC Core', domain: 'NAC / AxelNAC', name: 'Понимание продукта и модулей', weight: 1.5, criterion: 'Понимает архитектуру AxelNAC, взаимосвязь AAA/Captive/Posturing/TACACS' },
   { block: 'NAC Core', domain: 'NAC / Astra Linux', name: 'Администрирование', weight: 1.5, criterion: 'Сервисы, логи, сеть, обновление, HA' },
   { block: 'NAC Core', domain: 'PKI', name: 'PKI-инфраструктура', weight: 1.5, criterion: 'Работа с центрами сертификации, OCSP, атрибуты сертификатов' },
@@ -66,8 +66,7 @@ const COMPETENCIES = [
 ]
 
 module.exports = {
-  DEFAULT_TEAM_NAME,
-  DEFAULT_CATALOG_NAME,
-  GRADE_TARGETS,
-  COMPETENCIES,
+  NAC_CATALOG_NAME,
+  NAC_GRADE_TARGETS,
+  NAC_COMPETENCIES,
 }

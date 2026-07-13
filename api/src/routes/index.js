@@ -25,10 +25,16 @@ router.get('/users/:userId/points', verifyUserToken, pointsController.getUserPoi
 
 router.get('/teams', verifyUserToken, isAdmin, teamController.getTeams)
 router.post('/teams', verifyUserToken, isAdmin, teamController.createTeam)
+router.patch('/teams/:teamId', verifyUserToken, isAdmin, teamController.updateTeam)
+
+router.get('/catalogs', verifyUserToken, competencyCatalogController.listCatalogs)
+router.post('/catalogs', verifyUserToken, isAdmin, competencyCatalogController.createCatalog)
+router.get('/catalogs/:catalogId', verifyUserToken, competencyCatalogController.getCatalog)
+router.patch('/catalogs/:catalogId', verifyUserToken, isAdmin, competencyCatalogController.updateCatalog)
+router.delete('/catalogs/:catalogId', verifyUserToken, isAdmin, competencyCatalogController.deleteCatalog)
+router.post('/catalogs/:catalogId/clone', verifyUserToken, isAdmin, competencyCatalogController.cloneCatalogById)
 
 router.get('/teams/:teamId/catalog', verifyUserToken, competencyCatalogController.getTeamCatalog)
-router.post('/teams/:teamId/catalogs', verifyUserToken, isAdmin, competencyCatalogController.createTeamCatalog)
-router.post('/catalogs/clone', verifyUserToken, isAdmin, competencyCatalogController.cloneCatalog)
 
 router.post('/catalogs/:catalogId/blocks', verifyUserToken, isAdmin, competencyCatalogController.createBlock)
 router.put('/blocks/:id', verifyUserToken, isAdmin, competencyCatalogController.updateBlock)

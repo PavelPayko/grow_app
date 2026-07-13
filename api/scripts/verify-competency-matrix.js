@@ -3,6 +3,8 @@
  * Run: npm run verify:competency
  */
 
+const { getFullCatalogByTeamId, getFullCatalogByCatalogId } = require('../src/services/competencyCatalogService')
+const { validateCatalogForTeam } = require('../src/services/assessmentCycleService')
 const { getTargetStatus } = require('../src/services/assessmentAggregateService')
 const { canAssess, canAssessByRole, canViewAssessment } = require('../src/middleware/canAssess')
 const { upsertAssessment } = require('../src/services/competencyAssessmentService')
@@ -254,6 +256,79 @@ async function verifyClosedCycleImmutability() {
   }
 }
 
+async function verifyTeamCatalogDecoupling() {
+  console.log('\n7.x Team catalog binding (decoupled schema)')
+
+  const catalogIdColumn = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'teams'
+       AND column_name = 'catalog_id'`
+  )
+
+  if (catalogIdColumn.rowCount) {
+    ok('teams.catalog_id column exists')
+  } else {
+    fail('teams.catalog_id column exists')
+    return
+  }
+
+  const legacyColumns = await pool.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'competency_catalogs'
+       AND column_name IN ('team_id', 'is_active')`
+  )
+
+  if (!legacyColumns.rowCount) {
+    ok('competency_catalogs without team_id/is_active')
+  } else {
+    fail(
+      'competency_catalogs without team_id/is_active',
+      legacyColumns.rows.map((row) => row.column_name).join(', ')
+    )
+  }
+
+  const teamResult = await pool.query(
+    `SELECT id, catalog_id
+     FROM teams
+     WHERE catalog_id IS NOT NULL
+     LIMIT 1`
+  )
+
+  if (!teamResult.rowCount) {
+    skip('team catalog resolves via teams.catalog_id', 'no team with catalog_id')
+    return
+  }
+
+  const { id: team_id, catalog_id } = teamResult.rows[0]
+  const byTeam = await getFullCatalogByTeamId({ team_id })
+  const byCatalog = await getFullCatalogByCatalogId({ catalog_id })
+
+  if (byTeam.catalog?.id === byCatalog.catalog?.id) {
+    ok('getFullCatalogByTeamId matches teams.catalog_id')
+  } else {
+    fail('getFullCatalogByTeamId matches teams.catalog_id')
+  }
+
+  assertEqual(
+    await validateCatalogForTeam({ team_id, catalog_id }),
+    true,
+    'validateCatalogForTeam accepts team catalog'
+  )
+
+  assertEqual(
+    await validateCatalogForTeam({
+      team_id,
+      catalog_id: '00000000-0000-0000-0000-000000000001',
+    }),
+    false,
+    'validateCatalogForTeam rejects foreign catalog'
+  )
+}
+
 async function verifyRbac() {
   console.log('\n10.4 RBAC checks')
 
@@ -282,6 +357,7 @@ async function main() {
 
   try {
     await pool.query('SELECT 1')
+    await verifyTeamCatalogDecoupling()
     await verifyAggregatesAgainstDb()
     await verifyExcelRoundtrip()
     await verifyClosedCycleImmutability()
