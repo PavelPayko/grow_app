@@ -9,6 +9,7 @@ import {
     Select,
     Table,
     Typography,
+    Alert,
     message,
     type TableProps,
 } from 'antd'
@@ -29,6 +30,27 @@ type ApiError = AxiosError<{ error: string }>
 
 function getApiError(error: unknown): string {
     return (error as ApiError)?.response?.data?.error || 'Произошла ошибка'
+}
+
+function CatalogChangeHint({ initialCatalogId }: { initialCatalogId?: string | null }) {
+    const catalogId = Form.useWatch<string | undefined>('catalog_id')
+    const catalogChanged =
+        initialCatalogId != null &&
+        (catalogId ?? null) !== initialCatalogId
+
+    if (!catalogChanged) {
+        return null
+    }
+
+    return (
+        <Alert
+            type='info'
+            showIcon
+            message='Смена каталога не затрагивает существующие циклы оценки'
+            description='У уже созданных циклов сохраняется каталог, назначенный при их создании. Новый каталог будет использоваться для матрицы команды и только для новых циклов.'
+            style={{ marginBottom: 16 }}
+        />
+    )
 }
 
 export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
@@ -221,6 +243,7 @@ export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
                             options={catalogOptions}
                         />
                     </Form.Item>
+                    <CatalogChangeHint initialCatalogId={editingTeam?.catalog_id} />
                 </Form>
             </Modal>
         </Flex>

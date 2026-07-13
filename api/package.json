@@ -8,7 +8,8 @@
     "seed": "node seed.js",
     "migrate:users": "node migrate-users.js",
     "verify:competency": "node scripts/verify-competency-matrix.js",
-    "test": "npm run verify:competency"
+    "verify:catalog": "node scripts/verify-catalog-decoupling.js",
+    "test": "npm run verify:competency && npm run verify:catalog"
   },
   "author": "",
   "license": "ISC",
