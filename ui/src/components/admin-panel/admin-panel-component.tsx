@@ -41,6 +41,13 @@ export const AdminPanelComponent: FC<IMainProps> = () => {
                 }
             },
             {
+                title: 'Должность',
+                dataIndex: 'job_title',
+                key: 'job_title',
+                render: value => value || '-',
+                sorter: (a, b) => (a.job_title || '').localeCompare(b.job_title || ''),
+            },
+            {
                 title: 'Логин',
                 dataIndex: 'login',
                 key: 'login',

@@ -17,6 +17,7 @@ import { CompetencyMatrix } from 'components/competency-matrix'
 import { useCurrentUser } from 'core/hooks/use-current-user'
 
 import type { IContentProps } from './content-types'
+import { EmployeeProfileSummary } from './employee-profile-summary'
 
 
 
@@ -122,6 +123,7 @@ export const ContentComponent: FC<IContentProps> = ({
 
     >
 
+        {userId && <EmployeeProfileSummary userId={userId} />}
         <Tabs defaultActiveKey={defaultTab} items={tabs} />
 
     </Layout.Content>

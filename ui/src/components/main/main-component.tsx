@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FC } from 'react'
 
 import { type IMainProps } from './main-types'
 import { instanceAxios } from '../../core/api/axios'
-import { Empty, Flex, Layout, Menu, Select, Spin, Typography, theme, type MenuProps } from 'antd'
+import { Empty, Flex, Layout, Menu, Select, Spin, theme, type MenuProps } from 'antd'
 import { useNavigate } from 'react-router'
 import { AddUser } from 'components/add-user'
 import { useQuery } from '@tanstack/react-query'
@@ -26,27 +26,12 @@ function getAvailableTeams(user: IUser, teams: ITeam[]): ITeam[] {
     return []
 }
 
-function buildMemberLabel(user: IUser) {
-    if (!user.job_title) {
-        return user.full_name
-    }
-
-    return (
-        <Flex vertical gap={0}>
-            <span>{user.full_name}</span>
-            <Typography.Text type='secondary' style={{ fontSize: 12 }}>
-                {user.job_title}
-            </Typography.Text>
-        </Flex>
-    )
-}
-
 export const MainComponent: FC<IMainProps> = () => {
     const navigate = useNavigate()
 
     const [userData, setUserData] = useState<IUser | null>(null)
     const [activeUser, setActiveUser] = useState<string | null>(null)
-    const [selectedTeamId, setSelectedTeamId] = useState<string | null>(readSelectedTeamId)
+    const [selectedTeamIdOverride, setSelectedTeamId] = useState<string | null>(null)
 
     const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken()
 
@@ -68,6 +53,21 @@ export const MainComponent: FC<IMainProps> = () => {
         () => (userData ? getAvailableTeams(userData, teams) : []),
         [userData, teams]
     )
+
+    const selectedTeamId = useMemo(() => {
+        if (!availableTeams.length) {
+            return selectedTeamIdOverride ?? readSelectedTeamId()
+        }
+
+        const candidate = selectedTeamIdOverride ?? readSelectedTeamId()
+        const isValid = candidate && availableTeams.some((team) => team.id === candidate)
+
+        if (isValid) {
+            return candidate
+        }
+
+        return availableTeams[0].id
+    }, [availableTeams, selectedTeamIdOverride])
 
     const showTeamSelector = userData?.role === 'admin'
         || (userData?.role === 'lead' && (userData.managed_team_ids?.length ?? 0) > 1)
@@ -103,7 +103,7 @@ export const MainComponent: FC<IMainProps> = () => {
         for (const member of teamMembers) {
             items.push({
                 key: member.id,
-                label: buildMemberLabel(member),
+                label: member.full_name,
             })
         }
 
@@ -135,20 +135,13 @@ export const MainComponent: FC<IMainProps> = () => {
     }, [navigate])
 
     useEffect(() => {
-        if (!availableTeams.length) return
+        if (!availableTeams.length || !selectedTeamId) return
 
         const stored = readSelectedTeamId()
-        const isStoredValid = stored && availableTeams.some((team) => team.id === stored)
-
-        if (isStoredValid) {
-            setSelectedTeamId(stored)
-            return
+        if (stored !== selectedTeamId) {
+            writeSelectedTeamId(selectedTeamId)
         }
-
-        const firstTeamId = availableTeams[0].id
-        setSelectedTeamId(firstTeamId)
-        writeSelectedTeamId(firstTeamId)
-    }, [availableTeams])
+    }, [availableTeams, selectedTeamId])
 
     const handleTeamChange = (teamId: string) => {
         setSelectedTeamId(teamId)
