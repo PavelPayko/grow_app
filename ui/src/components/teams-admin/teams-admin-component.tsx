@@ -53,7 +53,7 @@ function CatalogChangeHint({ initialCatalogId }: { initialCatalogId?: string | n
     )
 }
 
-export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
+export const TeamsAdminComponent: FC<ITeamsAdminProps> = ({ readOnly = false }) => {
     const queryClient = useQueryClient()
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [editingTeam, setEditingTeam] = useState<ITeam | null>(null)
@@ -125,35 +125,43 @@ export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
             render: (value: string) => new Date(value).toLocaleString(),
             sorter: (a, b) => new Date(a.created_at).valueOf() - new Date(b.created_at).valueOf(),
         },
-        {
-            title: '',
-            key: 'actions',
-            width: 120,
-            render: (_, team) => (
-                <Button
-                    type='link'
-                    icon={<EditOutlined />}
-                    onClick={() => setEditingTeam(team)}
-                >
-                    Изменить
-                </Button>
-            ),
-        },
+        ...(readOnly
+            ? []
+            : [
+                  {
+                      title: '',
+                      key: 'actions',
+                      width: 120,
+                      render: (_: unknown, team: ITeam) => (
+                          <Button
+                              type='link'
+                              icon={<EditOutlined />}
+                              onClick={() => setEditingTeam(team)}
+                          >
+                              Изменить
+                          </Button>
+                      ),
+                  },
+              ]),
     ]
 
     return (
         <Flex vertical gap={16}>
             <Flex justify='space-between' align='center'>
                 <Typography.Text type='secondary'>
-                    Управление командами: привязка каталога компетенций и циклы оценки
+                    {readOnly
+                        ? 'Команды в вашей зоне ответственности'
+                        : 'Управление командами: привязка каталога компетенций и циклы оценки'}
                 </Typography.Text>
-                <Button
-                    type='primary'
-                    icon={<PlusOutlined />}
-                    onClick={() => setIsCreateOpen(true)}
-                >
-                    Создать команду
-                </Button>
+                {!readOnly && (
+                    <Button
+                        type='primary'
+                        icon={<PlusOutlined />}
+                        onClick={() => setIsCreateOpen(true)}
+                    >
+                        Создать команду
+                    </Button>
+                )}
             </Flex>
 
             <Table
@@ -164,37 +172,40 @@ export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
                 locale={{ emptyText: 'Команды не найдены' }}
             />
 
-            <Modal
-                title='Создать команду'
-                open={isCreateOpen}
-                onCancel={() => setIsCreateOpen(false)}
-                okButtonProps={{
-                    htmlType: 'submit',
-                    form: 'create-team',
-                    loading: createTeamMutation.isPending,
-                }}
-                destroyOnHidden
-            >
-                <Form<ICreateTeamFormValues>
-                    name='create-team'
-                    layout='vertical'
-                    clearOnDestroy
-                    onFinish={(values) => createTeamMutation.mutate(values)}
+            {!readOnly && (
+                <Modal
+                    title='Создать команду'
+                    open={isCreateOpen}
+                    onCancel={() => setIsCreateOpen(false)}
+                    okButtonProps={{
+                        htmlType: 'submit',
+                        form: 'create-team',
+                        loading: createTeamMutation.isPending,
+                    }}
+                    destroyOnHidden
                 >
-                    <Form.Item
-                        name='name'
-                        label='Название'
-                        rules={[
-                            { required: true, message: 'Введите название команды' },
-                            { whitespace: true, message: 'Название не может быть пустым' },
-                        ]}
+                    <Form<ICreateTeamFormValues>
+                        name='create-team'
+                        layout='vertical'
+                        clearOnDestroy
+                        onFinish={(values) => createTeamMutation.mutate(values)}
                     >
-                        <Input placeholder='Например, Backend Team' />
-                    </Form.Item>
-                </Form>
-            </Modal>
+                        <Form.Item
+                            name='name'
+                            label='Название'
+                            rules={[
+                                { required: true, message: 'Введите название команды' },
+                                { whitespace: true, message: 'Название не может быть пустым' },
+                            ]}
+                        >
+                            <Input placeholder='Например, Backend Team' />
+                        </Form.Item>
+                    </Form>
+                </Modal>
+            )}
 
-            <Modal
+            {!readOnly && (
+                <Modal
                 title='Изменить команду'
                 open={Boolean(editingTeam)}
                 onCancel={() => setEditingTeam(null)}
@@ -246,6 +257,7 @@ export const TeamsAdminComponent: FC<ITeamsAdminProps> = () => {
                     <CatalogChangeHint initialCatalogId={editingTeam?.catalog_id} />
                 </Form>
             </Modal>
+            )}
         </Flex>
     )
 }

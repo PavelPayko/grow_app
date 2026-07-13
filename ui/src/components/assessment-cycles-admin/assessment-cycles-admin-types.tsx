@@ -4,6 +4,7 @@ import type { Dayjs } from 'dayjs'
 
 export interface IAssessmentCyclesAdminProps {
   className?: string
+  teamIds?: string[]
 }
 
 export interface ICreateCycleFormValues {

@@ -4,7 +4,7 @@ import { Select, Space, Tag, Typography } from 'antd'
 
 import type { IAssessmentCycle } from 'core/types/competency'
 
-import { CYCLE_STATUS_LABELS } from '../competency-matrix-types'
+import { CYCLE_STATUS_LABELS } from '../competency-matrix-constants'
 
 interface MatrixCycleSelectorProps {
   cycles: IAssessmentCycle[]

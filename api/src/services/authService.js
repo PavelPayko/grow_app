@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
+const { getManagedTeamIds } = require('./managedTeamsService')
 require('dotenv').config()
 
 exports.getToken = async (params) => {
@@ -9,7 +10,10 @@ exports.getToken = async (params) => {
 
   if (!validPass) return null
 
-  let payload = { id: userId, role: userRole }
+  const payload = { id: userId, role: userRole }
+  if (userRole === 'lead') {
+    payload.managed_team_ids = await getManagedTeamIds(userId)
+  }
   const token = jwt.sign(payload, process.env.TOKEN_SECRET)
 
   return token

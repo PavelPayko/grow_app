@@ -1,4 +1,4 @@
-const { getUserByLogin, getUserById } = require('../services/userService')
+const { getUserByLogin, getUserProfile } = require('../services/userService')
 const { getToken } = require('../services/authService')
 
 exports.login = async (req, res) => {
@@ -15,7 +15,8 @@ exports.login = async (req, res) => {
       const token = await getToken({ userId, userRole, userPassHash, password })
 
       if (token) {
-        res.status(200).header("auth-token", token).json({ token, user: user.rows[0] })
+        const profile = await getUserProfile({ id: userId })
+        res.status(200).header("auth-token", token).json({ token, user: profile })
       } else {
         res.status(401).json({ error: 'Логин или пароль введен неверно' })
       }
@@ -34,9 +35,9 @@ exports.auth_me = async (req, res) => {
   try {
     const { id } = req.user
 
-    const result = await getUserById({ id })
-    if (result.rowCount) {
-      res.status(200).json(result.rows[0])
+    const profile = await getUserProfile({ id })
+    if (profile) {
+      res.status(200).json(profile)
     } else {
       res.status(401).json({ error: 'Пользователь не авторизован' })
     }

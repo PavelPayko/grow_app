@@ -1,14 +1,13 @@
 import type { FC } from 'react'
 
-import { Input, Select, Space, Table, Tag, Typography, type TableProps } from 'antd'
+import { Input, Select, Space, Table, Tag, Typography, theme, type TableProps } from 'antd'
 
 import type { IBlockAggregates } from 'core/types/competency'
 import type { IAssessmentUpsertPayload } from 'core/types/competency'
+import { getTargetStatusColor } from 'core/constants/target-status'
 
-import {
-  TARGET_STATUS_META,
-  type IMatrixBlock,
-} from '../competency-matrix-types'
+import { TARGET_STATUS_META } from '../competency-matrix-constants'
+import type { IMatrixBlock } from '../competency-matrix-types'
 import { formatRate, formatScore } from '../competency-matrix-utils'
 
 interface MatrixRow {
@@ -144,8 +143,12 @@ export const MatrixBlockSection: FC<MatrixBlockSectionProps> = ({
   savingCompetencyId,
   onSave,
 }) => {
+  const { token } = theme.useToken()
   const targetStatus = blockAggregate?.target?.status
   const targetMeta = targetStatus ? TARGET_STATUS_META[targetStatus] : null
+  const targetColor = targetStatus
+    ? getTargetStatusColor(targetStatus, token.colorPrimary)
+    : undefined
 
   return (
     <div style={{ marginBottom: 24 }}>
@@ -157,7 +160,7 @@ export const MatrixBlockSection: FC<MatrixBlockSectionProps> = ({
           Итог: {formatScore(blockAggregate?.weighted_total ?? null)}
         </Typography.Text>
         {targetMeta && (
-          <Tag color={targetMeta.color}>
+          <Tag color={targetColor}>
             {targetMeta.label}
             {blockAggregate?.target
               ? ` (${blockAggregate.target.min_score}–${blockAggregate.target.max_score})`

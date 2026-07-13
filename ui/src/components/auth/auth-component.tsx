@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router'
 
 import { Button, Card, Flex, Form, Input, message, Typography } from 'antd'
 import { instanceAxios } from '../../core/api/axios'
+import { writeStoredUser } from 'core/utils/current-user-storage'
 import type { IUser, IUserCreate } from '../../core/types/user'
 import type { AxiosError, AxiosResponse } from 'axios'
 
@@ -17,7 +18,7 @@ export const AuthComponent: FC = () => {
             .post('/api/login', { ...values })
             .then((res: AxiosResponse<{ user: IUser, token: string }>) => {
                 localStorage.setItem('token', res.data.token)
-                localStorage.setItem('user', JSON.stringify(res.data.user || {}))
+                writeStoredUser(res.data.user || {})
                 navigate('/')
             })
             .catch((err: AxiosError<{ error: string }>) => {

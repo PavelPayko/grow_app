@@ -91,14 +91,22 @@ The UI SHALL provide a multi-select for managed teams when role is lead in admin
 
 #### Scenario: Lead cannot edit managed teams
 - **WHEN** a lead opens admin user management
-- **THEN** the Users tab is not available
+- **THEN** the Users tab shows scoped users in read-only mode without create, update, or delete actions
 
-### Requirement: Trimmed admin panel for lead
-The system SHALL allow leads to access /admin with only the Assessment Cycles tab visible, scoped to managed teams.
+### Requirement: Scoped admin panel for lead
+The system SHALL allow leads to access /admin with Users, Teams, Assessment Cycles, and Итоги tabs scoped to managed teams; catalog and user CRUD remain admin-only.
 
-#### Scenario: Lead sees cycles tab only
+#### Scenario: Lead sees scoped admin tabs
 - **WHEN** a lead navigates to /admin
-- **THEN** only the Assessment Cycles tab is shown
+- **THEN** Users, Teams, Assessment Cycles, and Итоги tabs are shown; Catalog is hidden
+
+#### Scenario: Lead users tab scoped to managed teams
+- **WHEN** a lead opens the Users tab
+- **THEN** only users from managed teams are listed without edit actions
+
+#### Scenario: Lead teams tab read-only
+- **WHEN** a lead opens the Teams tab
+- **THEN** only managed teams are listed without create or edit actions
 
 #### Scenario: Lead cycles scoped to managed teams
 - **WHEN** a lead opens Assessment Cycles

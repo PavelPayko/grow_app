@@ -46,7 +46,9 @@ function getApiError(error: unknown): string {
   return (error as ApiError)?.response?.data?.error || 'Произошла ошибка'
 }
 
-export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = () => {
+export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = ({
+  teamIds,
+}) => {
   const queryClient = useQueryClient()
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -55,6 +57,12 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
     queryKey: ['teams'],
     queryFn: fetchTeams,
   })
+
+  const visibleTeams = useMemo(() => {
+    if (!teamIds?.length) return teams
+    const allowed = new Set(teamIds)
+    return teams.filter((team) => allowed.has(team.id))
+  }, [teamIds, teams])
 
   const { data: catalogs = [] } = useQuery({
     queryKey: ['catalogs'],
@@ -66,8 +74,8 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
     [catalogs]
   )
 
-  const activeTeamId = selectedTeamId || teams[0]?.id || null
-  const activeTeam = teams.find((team) => team.id === activeTeamId) ?? null
+  const activeTeamId = selectedTeamId || visibleTeams[0]?.id || null
+  const activeTeam = visibleTeams.find((team) => team.id === activeTeamId) ?? null
 
   const {
     data: cycles = [],
@@ -204,7 +212,7 @@ export const AssessmentCyclesAdminComponent: FC<IAssessmentCyclesAdminProps> = (
             loading={teamsLoading}
             value={activeTeamId}
             onChange={setSelectedTeamId}
-            options={teams.map((team) => ({ value: team.id, label: team.name }))}
+            options={visibleTeams.map((team) => ({ value: team.id, label: team.name }))}
             placeholder='Выберите команду'
           />
         </Space>
