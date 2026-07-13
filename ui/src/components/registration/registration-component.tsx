@@ -13,7 +13,7 @@ export const RegistrationComponent: FC = () => {
 
     const submitHandler = (values: IUserCreate) => {
         instanceAxios
-            .post('api/users', { ...values })
+            .post('/api/users', { ...values })
             .then(() => {
                 message.success('Вы успешно зарегистрированы')
                 navigate('/auth')

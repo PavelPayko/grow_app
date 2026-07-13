@@ -1,0 +1,108 @@
+{
+  "stack": {
+    "languages": [
+      {
+        "name": "JSON",
+        "fileCount": 7,
+        "lineCount": 7876,
+        "percentage": 53
+      },
+      {
+        "name": "TypeScript",
+        "fileCount": 90,
+        "lineCount": 2956,
+        "percentage": 20
+      },
+      {
+        "name": "JavaScript",
+        "fileCount": 31,
+        "lineCount": 2811,
+        "percentage": 19
+      },
+      {
+        "name": "Markdown",
+        "fileCount": 13,
+        "lineCount": 1121,
+        "percentage": 8
+      },
+      {
+        "name": "YAML",
+        "fileCount": 2,
+        "lineCount": 15,
+        "percentage": 0
+      },
+      {
+        "name": "HTML",
+        "fileCount": 1,
+        "lineCount": 9,
+        "percentage": 0
+      },
+      {
+        "name": "CSS",
+        "fileCount": 16,
+        "lineCount": 45,
+        "percentage": 0
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "unknown",
+    "buildTools": []
+  },
+  "structure": {
+    "rootFiles": [
+      "DEPLOY.md",
+      "ecosystem.config.cjs",
+      "INSTALL.md"
+    ],
+    "mainDirectories": [
+      {
+        "name": "ui",
+        "purpose": "项目目录",
+        "fileCount": 137,
+        "path": "ui"
+      },
+      {
+        "name": "api",
+        "purpose": "API 接口",
+        "fileCount": 41,
+        "path": "api"
+      },
+      {
+        "name": "openspec",
+        "purpose": "项目目录",
+        "fileCount": 11,
+        "path": "openspec"
+      },
+      {
+        "name": "deploy",
+        "purpose": "项目目录",
+        "fileCount": 2,
+        "path": "deploy"
+      }
+    ],
+    "entryPoints": []
+  },
+  "patterns": {
+    "architecture": "unknown",
+    "codeStyle": [],
+    "conventions": [
+      "OpenSpec"
+    ]
+  },
+  "stats": {
+    "totalFiles": 178,
+    "totalLines": 14833,
+    "byLanguage": {
+      "JSON": 7876,
+      "TypeScript": 2956,
+      "JavaScript": 2811,
+      "Markdown": 1121,
+      "YAML": 15,
+      "HTML": 9,
+      "CSS": 45
+    }
+  },
+  "analyzedAt": "2026-07-10T16:38:42.035Z",
+  "projectRoot": "C:\\Users\\MiBook/../../data/code/grow_app",
+  "projectName": "grow_app"
+}

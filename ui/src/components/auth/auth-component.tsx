@@ -14,7 +14,7 @@ export const AuthComponent: FC = () => {
 
     const submitHandler = (values: IUserCreate) => {
         instanceAxios
-            .post('api/login', { ...values })
+            .post('/api/login', { ...values })
             .then((res: AxiosResponse<{ user: IUser, token: string }>) => {
                 localStorage.setItem('token', res.data.token)
                 localStorage.setItem('user', JSON.stringify(res.data.user || {}))

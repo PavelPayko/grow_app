@@ -43,3 +43,7 @@
     npm run dev
     ```
   - интерфейс доступен по адресу http://localhost:5173/
+
+# Деплой на сервер (тестовая среда)
+
+См. [DEPLOY.md](DEPLOY.md) — PM2 + Nginx без Docker.

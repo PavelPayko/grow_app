@@ -35,7 +35,7 @@ export const HeaderComponent: FC<IMainProps> = () => {
 
     const userData = JSON.parse(localStorage.getItem('user') || '{}')
 
-    const items: MenuProps['items'] = [
+    const baseItems: MenuProps['items'] = [
         {
             key: 'logout',
             label: 'Выйти',
@@ -47,6 +47,14 @@ export const HeaderComponent: FC<IMainProps> = () => {
 
         }
     ]
+
+    const items = isAdmin ? [...baseItems, {
+        key: 'admin',
+        label: 'Администрирование',
+        onClick: () => {
+            navigate('/admin')
+        }
+    }] : baseItems
 
     return <Layout.Header style={{ padding: '0 24px', background: colorBgContainer, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <NavLink to={'/'}>
