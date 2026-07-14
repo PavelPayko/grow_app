@@ -1,4 +1,5 @@
 const pool = require('../config/db')
+const { getManagedTeamIds } = require('./managedTeamsService')
 
 exports.getAllTeams = async () => {
   const result = await pool.query(
@@ -70,6 +71,34 @@ exports.deleteTeam = async (params) => {
   const { id } = params
   const result = await pool.query('DELETE FROM teams WHERE id = $1', [id])
   return result
+}
+
+exports.getTeamsByScope = async (actor) => {
+  if (actor.role === 'admin') {
+    return exports.getAllTeams()
+  }
+
+  if (actor.role === 'lead') {
+    const managedTeamIds = Array.isArray(actor.managed_team_ids)
+      ? actor.managed_team_ids
+      : await getManagedTeamIds(actor.id)
+
+    if (!managedTeamIds.length) {
+      return { rows: [] }
+    }
+
+    const result = await pool.query(
+      `SELECT t.id, t.name, t.catalog_id, t.created_at, c.name AS catalog_name
+       FROM teams t
+       LEFT JOIN competency_catalogs c ON c.id = t.catalog_id
+       WHERE t.id = ANY($1::uuid[])
+       ORDER BY t.name`,
+      [managedTeamIds]
+    )
+    return result
+  }
+
+  return { rows: [] }
 }
 
 exports.isTeamNameTaken = async (params) => {

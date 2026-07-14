@@ -12,44 +12,47 @@ import {
 import { fetchTeamCatalog } from 'core/api/competency-catalog-api'
 import { fetchTeams } from 'core/api/teams-api'
 import { fetchUsers } from 'core/api/users-api'
+import { useCurrentUser } from 'core/hooks/use-current-user'
 import type { IAssessmentUpsertPayload } from 'core/types/competency'
 import type { IUser } from 'core/types/user'
 
-import { getApiError, getStoredUser } from './competency-matrix-utils'
+import { getApiError } from './competency-matrix-utils'
 
-function resolveViewedUser(userId: string, users: IUser[] | undefined): IUser | null {
-  const storedUser = getStoredUser()
-  if (storedUser?.role === 'admin') {
+function resolveViewedUser(
+  userId: string,
+  users: IUser[] | undefined,
+  currentUser: IUser | null,
+  isManager: boolean,
+): IUser | null {
+  if (isManager) {
     return users?.find((user) => user.id === userId) ?? null
   }
-  if (storedUser?.id === userId) {
-    return storedUser
+  if (currentUser?.id === userId) {
+    return currentUser
   }
   return null
 }
 
 export function useCompetencyMatrix(userId: string) {
   const queryClient = useQueryClient()
-  const storedUser = getStoredUser()
-  const isAdmin = storedUser?.role === 'admin'
+  const { user, isAdmin, isLead, canManageTeam } = useCurrentUser()
+  const isManager = isAdmin || isLead
 
   const [selectedCycleId, setSelectedCycleId] = useState<string | null>(null)
 
   const { data: users } = useQuery({
     queryKey: ['users'],
     queryFn: fetchUsers,
-    enabled: isAdmin,
+    enabled: isManager,
   })
 
-  // Matrix loads catalog snapshot from the selected cycle (cycle.catalog_id).
-  // Team catalog binding (teams.catalog_id) is used when creating new cycles.
-  const viewedUser = resolveViewedUser(userId, users)
+  const viewedUser = resolveViewedUser(userId, users, user ?? null, isManager)
   const teamId = viewedUser?.team_id ?? null
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ['teams'],
     queryFn: fetchTeams,
-    enabled: isAdmin && Boolean(teamId),
+    enabled: isManager && Boolean(teamId),
   })
 
   const team = teams.find((item) => item.id === teamId) ?? null
@@ -57,12 +60,12 @@ export function useCompetencyMatrix(userId: string) {
   const { data: teamCatalog, isLoading: teamCatalogLoading } = useQuery({
     queryKey: ['teamCatalog', teamId],
     queryFn: () => fetchTeamCatalog(teamId!),
-    enabled: !isAdmin && Boolean(teamId),
+    enabled: !isManager && Boolean(teamId),
     select: (data) => data.catalog,
   })
 
-  const hasTeamCatalog = isAdmin ? Boolean(team?.catalog_id) : Boolean(teamCatalog)
-  const teamCatalogCheckLoading = isAdmin ? teamsLoading : teamCatalogLoading
+  const hasTeamCatalog = isManager ? Boolean(team?.catalog_id) : Boolean(teamCatalog)
+  const teamCatalogCheckLoading = isManager ? teamsLoading : teamCatalogLoading
 
   const { data: cycles = [], isLoading: cyclesLoading } = useQuery({
     queryKey: ['teamCycles', teamId],
@@ -111,11 +114,19 @@ export function useCompetencyMatrix(userId: string) {
     onError: (error) => message.error(getApiError(error)),
   })
 
-  const canEdit = isAdmin && matrix?.cycle.status === 'active'
+  const targetTeamId = viewedUser?.team_id ?? null
+
+  const canAssess =
+    isAdmin ||
+    (isLead && targetTeamId !== null && canManageTeam(targetTeamId))
+
+  const canEdit = canAssess && matrix?.cycle.status === 'active'
   const isReadOnly = !canEdit
 
   return {
     isAdmin,
+    isLead,
+    isManager,
     viewedUser,
     teamId,
     hasTeamCatalog,

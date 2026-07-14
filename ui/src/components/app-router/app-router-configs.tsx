@@ -4,6 +4,7 @@ import { Main } from '../main'
 import { NotFound } from '../not-found'
 import { AdminPanel } from 'components/admin-panel'
 import { Forbidden } from 'components/forbidden'
+import { Info } from 'components/info'
 
 export const routes = [
     {
@@ -26,6 +27,11 @@ export const routes = [
         name: 'main',
         path: '/',
         element: <Main />
+    },
+    {
+        name: 'info',
+        path: '/info',
+        element: <Info />
     },
     {
         name: 'not-found',

@@ -1,1 +1,1 @@
-export { ContentComponent as Content } from './content-component'
+export { ContentComponent as Content, TEAM_DASHBOARD_KEY } from './content-component'

@@ -1,5 +1,6 @@
 const {
   getAllTeams,
+  getTeamsByScope,
   createTeam,
   updateTeam,
   isTeamNameTaken,
@@ -8,7 +9,7 @@ const { getCatalogById } = require('../services/competencyCatalogService')
 
 exports.getTeams = async (req, res) => {
   try {
-    const result = await getAllTeams()
+    const result = await getTeamsByScope(req.user)
     res.status(200).json(result.rows)
   } catch (err) {
     res.status(500).json({ error: err.message })

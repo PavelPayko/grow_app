@@ -1,5 +1,6 @@
 export interface ITeamsAdminProps {
   className?: string
+  readOnly?: boolean
 }
 
 export interface ICreateTeamFormValues {

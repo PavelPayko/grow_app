@@ -12,7 +12,7 @@ import type { IProtectedRouteProps, IRoute } from './app-router-types'
 
 const ProtectedRoute: FC<IProtectedRouteProps> = ({ children }) => {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
-    if (user?.role !== 'admin') {
+    if (user?.role !== 'admin' && user?.role !== 'lead') {
         return <Navigate to="/forbidden" replace />;
     }
 

@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 DO $$ 
 BEGIN
-  CREATE TYPE user_role AS ENUM ('user', 'admin');
+  CREATE TYPE user_role AS ENUM ('user', 'admin', 'lead');
 EXCEPTION 
   WHEN duplicate_object THEN RAISE NOTICE 'Тип user_role уже существует.';
 END $$;
@@ -50,8 +50,15 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT NOT NULL,
   role          user_role NOT NULL DEFAULT 'user',
   team_id       UUID REFERENCES teams(id) ON DELETE SET NULL,
-  grade         user_grade NOT NULL DEFAULT 'junior',
+  grade         user_grade,
+  job_title     TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_managed_teams (
+  user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  team_id       UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, team_id)
 );
 
 CREATE TABLE IF NOT EXISTS competency_catalogs (
@@ -143,7 +150,7 @@ CREATE TABLE IF NOT EXISTS competency_assessments (
 CREATE TABLE IF NOT EXISTS cycle_user_snapshots (
   cycle_id      UUID NOT NULL REFERENCES assessment_cycles(id) ON DELETE CASCADE,
   user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  grade         user_grade NOT NULL,
+  grade         user_grade,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (cycle_id, user_id)
 );

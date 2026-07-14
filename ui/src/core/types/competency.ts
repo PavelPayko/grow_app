@@ -105,7 +105,7 @@ export interface IBlockAggregates {
 export interface IUserAggregates {
   cycle_id: string
   user_id: string
-  grade: IUserGrade
+  grade: IUserGrade | null
   weighted_sum: number | null
   weight_scored: number | null
   weighted_total: number | null
@@ -215,14 +215,35 @@ export interface ICreateCyclePayload {
   end_date?: string | null
 }
 
+export interface IUserCycleHistoryEntry {
+  cycle_id: string
+  cycle_name: string
+  cycle_status: ICycleStatus
+  weighted_total: number | null
+  fill_rate: number | null
+  blocks: IBlockAggregates[]
+}
+
 export interface ITeamAggregateUser {
   user_id: string
   full_name: string
-  grade: IUserGrade
+  grade: IUserGrade | null
   weighted_total: number | null
   unweighted_avg: number | null
   fill_rate: number | null
   scored_count: number
   total_count: number
   blocks: IBlockAggregates[]
+}
+
+export type IOrgCycleStatus = ICycleStatus | 'not_started'
+
+export interface IOrgSummaryRow {
+  team_id: string
+  team_name: string
+  cycle_id: string | null
+  cycle_name: string | null
+  cycle_status: IOrgCycleStatus
+  avg_fill_rate: number | null
+  member_count: number
 }

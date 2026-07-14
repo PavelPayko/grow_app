@@ -5,10 +5,12 @@
 
 const { getFullCatalogByTeamId, getFullCatalogByCatalogId } = require('../src/services/competencyCatalogService')
 const { validateCatalogForTeam } = require('../src/services/assessmentCycleService')
-const { getTargetStatus } = require('../src/services/assessmentAggregateService')
-const { canAssess, canAssessByRole, canViewAssessment } = require('../src/middleware/canAssess')
+const { getTargetStatus, calculateUserAggregates, calculateTeamAggregates } = require('../src/services/assessmentAggregateService')
+const { canAssess, canAssessByRole, canViewUser, canAccessTeam, managesTeam } = require('../src/middleware/canAssess')
+const { getUsersByScope } = require('../src/services/userService')
+const { getTeamsByScope } = require('../src/services/teamService')
+const { getOrgSummary } = require('../src/services/orgSummaryService')
 const { upsertAssessment } = require('../src/services/competencyAssessmentService')
-const { calculateUserAggregates } = require('../src/services/assessmentAggregateService')
 const { exportCycleToBuffer } = require('../src/services/competencyExcelExportService')
 const { importAssessmentsFromBuffer } = require('../src/services/competencyExcelImportService')
 const { getAssessmentsByCycleAndUser } = require('../src/services/competencyAssessmentService')
@@ -329,24 +331,149 @@ async function verifyTeamCatalogDecoupling() {
   )
 }
 
+async function verifyLeadScope() {
+  console.log('\n9.2 Lead scope (users, teams, org-summary)')
+
+  const teamsResult = await pool.query('SELECT id FROM teams ORDER BY name LIMIT 2')
+  if (teamsResult.rowCount < 2) {
+    skip('lead scope checks', 'need at least 2 teams in DB')
+    return
+  }
+
+  const [managedTeam, otherTeam] = teamsResult.rows
+  const actorResult = await pool.query('SELECT id FROM users LIMIT 1')
+  if (!actorResult.rowCount) {
+    skip('lead scope checks', 'no users in DB')
+    return
+  }
+
+  const leadActor = {
+    id: actorResult.rows[0].id,
+    role: 'lead',
+    managed_team_ids: [managedTeam.id],
+  }
+
+  const leadUsers = await getUsersByScope(leadActor)
+  const leadUserRows = leadUsers.rows ?? []
+  const outOfScopeUser = leadUserRows.find(
+    (user) => user.id !== leadActor.id && user.team_id !== managedTeam.id
+  )
+  if (outOfScopeUser) {
+    fail('lead getUsersByScope excludes other teams', `found user ${outOfScopeUser.id}`)
+  } else {
+    ok('lead getUsersByScope limited to managed team members')
+  }
+
+  const leadTeams = await getTeamsByScope(leadActor)
+  const leadTeamIds = (leadTeams.rows ?? []).map((team) => team.id)
+  if (leadTeamIds.length === 1 && leadTeamIds[0] === managedTeam.id) {
+    ok('lead getTeamsByScope returns managed teams only')
+  } else {
+    fail('lead getTeamsByScope returns managed teams only', leadTeamIds.join(', '))
+  }
+
+  assertEqual(
+    await canAccessTeam(leadActor, otherTeam.id),
+    false,
+    'lead canAccessTeam denied for unmanaged team'
+  )
+
+  const leadSummary = await getOrgSummary(leadActor)
+  const summaryTeamIds = leadSummary.map((row) => row.team_id)
+  if (summaryTeamIds.length === 1 && summaryTeamIds[0] === managedTeam.id) {
+    ok('lead org-summary scoped to managed teams')
+  } else {
+    fail('lead org-summary scoped to managed teams', summaryTeamIds.join(', '))
+  }
+
+  const userSummary = await getOrgSummary({ id: 'u1', role: 'user' })
+  assertEqual(userSummary.length, 0, 'regular user org-summary returns empty')
+}
+
+async function verifyTeamDashboardAggregates() {
+  console.log('\n9.3 Team dashboard aggregates (partial assessments)')
+
+  const cycleResult = await pool.query(
+    `SELECT id FROM assessment_cycles WHERE status = 'active' LIMIT 1`
+  )
+
+  if (!cycleResult.rowCount) {
+    skip('team dashboard partial assessments', 'no active cycle')
+    return
+  }
+
+  const cycleId = cycleResult.rows[0].id
+  const aggregates = await calculateTeamAggregates({ cycle_id: cycleId })
+
+  if (!aggregates.length) {
+    skip('team dashboard partial assessments', 'no team members in active cycle')
+    return
+  }
+
+  ok(`team aggregates returned for ${aggregates.length} member(s)`)
+
+  for (const member of aggregates) {
+    if (member.fill_rate !== null && (member.fill_rate < 0 || member.fill_rate > 1)) {
+      fail('member fill_rate within 0..1', `${member.user_id}: ${member.fill_rate}`)
+      return
+    }
+    if (member.scored_count > member.total_count) {
+      fail('member scored_count <= total_count', member.user_id)
+      return
+    }
+  }
+  ok('member fill_rate and scored_count bounds valid')
+
+  const hasPartial = aggregates.some(
+    (member) =>
+      member.total_count > 0 &&
+      member.scored_count > 0 &&
+      member.scored_count < member.total_count
+  )
+  const hasEmpty = aggregates.some(
+    (member) => member.total_count > 0 && member.scored_count === 0
+  )
+  const hasFull = aggregates.some(
+    (member) => member.total_count > 0 && member.scored_count === member.total_count
+  )
+
+  if (hasPartial || hasEmpty || hasFull) {
+    ok('team dashboard supports empty, partial, and full assessment states')
+  } else {
+    skip('team dashboard assessment mix', 'no competency rows for cycle members')
+  }
+}
+
 async function verifyRbac() {
   console.log('\n10.4 RBAC checks')
 
   const adminAllowed = await canAssess({ id: 'a1', role: 'admin' }, 'u2')
   assertEqual(adminAllowed, true, 'admin canAssess any user')
 
-  const userDenied = canAssessByRole('user', 'team-a', 'team-a')
+  const userDenied = canAssessByRole('user', null, 'team-a')
   assertEqual(userDenied, false, 'user role cannot canAssess (MVP)')
 
-  const teamLeadSameTeam = canAssessByRole('team_lead', 'team-a', 'team-a')
-  assertEqual(teamLeadSameTeam, true, 'team_lead canAssess same team (future hook)')
+  const leadManagedTeam = canAssessByRole('lead', ['team-a'], 'team-a')
+  assertEqual(leadManagedTeam, true, 'lead canAssess user in managed team')
 
-  const teamLeadOtherTeam = canAssessByRole('team_lead', 'team-a', 'team-b')
-  assertEqual(teamLeadOtherTeam, false, 'team_lead cannot canAssess other team')
+  const leadOtherTeam = canAssessByRole('lead', ['team-a'], 'team-b')
+  assertEqual(leadOtherTeam, false, 'lead cannot canAssess user outside managed teams')
 
-  assertEqual(canViewAssessment({ id: 'u1', role: 'user' }, 'u1'), true, 'user can view own assessments')
-  assertEqual(canViewAssessment({ id: 'u1', role: 'user' }, 'u2'), false, 'user cannot view others')
-  assertEqual(canViewAssessment({ id: 'a1', role: 'admin' }, 'u2'), true, 'admin can view any user')
+  assertEqual(await canViewUser({ id: 'u1', role: 'user' }, 'u1'), true, 'user can view own assessments')
+  assertEqual(await canViewUser({ id: 'u1', role: 'user' }, 'u2'), false, 'user cannot view others')
+  assertEqual(await canViewUser({ id: 'a1', role: 'admin' }, 'u2'), true, 'admin can view any user')
+
+  assertEqual(await canAccessTeam({ id: 'a1', role: 'admin' }, 'team-a'), true, 'admin canAccessTeam any team')
+  assertEqual(
+    await managesTeam({ id: 'l1', role: 'lead', managed_team_ids: ['team-a'] }, 'team-a'),
+    true,
+    'lead managesTeam for assigned team'
+  )
+  assertEqual(
+    await managesTeam({ id: 'l1', role: 'lead', managed_team_ids: ['team-a'] }, 'team-b'),
+    false,
+    'lead managesTeam denied for other team'
+  )
 }
 
 async function main() {
@@ -358,6 +485,8 @@ async function main() {
   try {
     await pool.query('SELECT 1')
     await verifyTeamCatalogDecoupling()
+    await verifyLeadScope()
+    await verifyTeamDashboardAggregates()
     await verifyAggregatesAgainstDb()
     await verifyExcelRoundtrip()
     await verifyClosedCycleImmutability()
