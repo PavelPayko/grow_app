@@ -2,7 +2,7 @@ import type { FC } from 'react'
 
 import { Table, type TableProps } from 'antd'
 
-import { USER_GRADE_LABELS } from 'core/types/user'
+import { formatGradeLabel } from 'core/types/user'
 import { formatRate, formatScore } from 'components/competency-matrix/competency-matrix-utils'
 
 import type { ITeamDashboardTableRow } from './team-dashboard-utils'
@@ -36,8 +36,9 @@ export const TeamSummaryTable: FC<ITeamSummaryTableProps> = ({
       title: 'Грейд',
       dataIndex: 'grade',
       key: 'grade',
-      render: (value: ITeamDashboardTableRow['grade']) => USER_GRADE_LABELS[value],
-      sorter: (a, b) => a.grade.localeCompare(b.grade),
+      render: (value: ITeamDashboardTableRow['grade']) => formatGradeLabel(value) ?? '—',
+      sorter: (a, b) =>
+        (formatGradeLabel(a.grade) ?? '').localeCompare(formatGradeLabel(b.grade) ?? ''),
     },
     {
       title: 'Итог',

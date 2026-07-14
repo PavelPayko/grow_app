@@ -105,7 +105,7 @@ export interface IBlockAggregates {
 export interface IUserAggregates {
   cycle_id: string
   user_id: string
-  grade: IUserGrade
+  grade: IUserGrade | null
   weighted_sum: number | null
   weight_scored: number | null
   weighted_total: number | null
@@ -227,7 +227,7 @@ export interface IUserCycleHistoryEntry {
 export interface ITeamAggregateUser {
   user_id: string
   full_name: string
-  grade: IUserGrade
+  grade: IUserGrade | null
   weighted_total: number | null
   unweighted_avg: number | null
   fill_rate: number | null

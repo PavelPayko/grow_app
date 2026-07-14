@@ -62,6 +62,8 @@ export const HeaderComponent: FC<IMainProps> = () => {
 
         '/admin': isLead ? 'Администрирование' : 'Панель администратора',
 
+        '/info': 'Справка',
+
     }
 
 
@@ -71,6 +73,16 @@ export const HeaderComponent: FC<IMainProps> = () => {
 
 
     const baseItems: MenuProps['items'] = [
+
+        {
+
+            key: 'info',
+
+            label: 'Справка',
+
+            onClick: () => navigate('/info'),
+
+        },
 
         {
 

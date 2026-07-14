@@ -99,7 +99,7 @@ exports.getUsersByScope = async (actor) => {
 
 exports.createUser = async (params) => {
   const { login, password, full_name, phone, email, role, team_id, grade, job_title, managed_team_ids } = params
-  const userGrade = grade || 'junior'
+  const userGrade = grade ?? null
   const salt = await bcrypt.genSalt(10)
   const password_hash = await bcrypt.hash(password, salt)
   const result = await pool.query(
@@ -117,7 +117,7 @@ exports.createUser = async (params) => {
 
 exports.updateUser = async (params) => {
   const { full_name, email, phone, role, team_id, grade, job_title, managed_team_ids, id } = params
-  const userGrade = grade || 'junior'
+  const userGrade = grade ?? null
 
   const result = await pool.query(
     `UPDATE users

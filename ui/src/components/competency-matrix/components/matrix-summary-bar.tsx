@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import { Flex, Statistic, Typography } from 'antd'
 
 import type { IUserAggregates } from 'core/types/competency'
-import { USER_GRADE_LABELS } from 'core/types/user'
+import { formatGradeLabel } from 'core/types/user'
 
 import { formatRate, formatScore } from '../competency-matrix-utils'
 
@@ -15,7 +15,7 @@ export const MatrixSummaryBar: FC<MatrixSummaryBarProps> = ({ aggregates }) => (
   <Flex gap={24} wrap='wrap'>
     <Statistic
       title='Грейд'
-      value={USER_GRADE_LABELS[aggregates.grade]}
+      value={formatGradeLabel(aggregates.grade) ?? '—'}
       valueStyle={{ fontSize: 18 }}
     />
     <Statistic

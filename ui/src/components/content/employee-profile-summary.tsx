@@ -4,7 +4,7 @@ import { MailOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
 import { Avatar, Flex, Spin, Tag, Typography, theme } from 'antd'
 
 import { useViewedUser } from 'core/hooks/use-viewed-user'
-import { USER_GRADE_LABELS } from 'core/types/user'
+import { formatGradeLabel } from 'core/types/user'
 
 interface EmployeeProfileSummaryProps {
   userId: string
@@ -58,7 +58,7 @@ export const EmployeeProfileSummary: FC<EmployeeProfileSummaryProps> = ({ userId
           <Typography.Title level={4} style={{ margin: 0 }}>
             {viewedUser.full_name}
           </Typography.Title>
-          <Tag>{USER_GRADE_LABELS[viewedUser.grade]}</Tag>
+          {viewedUser.grade && <Tag>{formatGradeLabel(viewedUser.grade)}</Tag>}
         </Flex>
 
         {viewedUser.job_title && (

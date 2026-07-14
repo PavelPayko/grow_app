@@ -5,6 +5,6 @@ export function isValidGrade(value: unknown): value is IUserGrade {
   return typeof value === 'string' && USER_GRADES.includes(value as IUserGrade)
 }
 
-export function normalizeGrade(value: unknown): IUserGrade {
-  return isValidGrade(value) ? value : 'junior'
+export function normalizeGrade(value: unknown): IUserGrade | null {
+  return isValidGrade(value) ? value : null
 }

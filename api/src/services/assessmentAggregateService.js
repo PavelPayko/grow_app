@@ -168,7 +168,7 @@ async function resolveUserGrade(cycle_id, user_id) {
   }
 
   const userResult = await pool.query('SELECT grade FROM users WHERE id = $1', [user_id])
-  return userResult.rows[0]?.grade || 'junior'
+  return userResult.rows[0]?.grade ?? null
 }
 
 exports.getTargetStatus = getTargetStatus
@@ -186,7 +186,9 @@ exports.calculateUserAggregates = async (params) => {
   const cycle = cycleResult.rows[0]
   const grade = await resolveUserGrade(cycle_id, user_id)
   const rows = await fetchCompetencyScoreRows(cycle_id, user_id, cycle.catalog_id)
-  const gradeTargetsByBlock = await fetchGradeTargetsByBlock(cycle.catalog_id, grade)
+  const gradeTargetsByBlock = grade
+    ? await fetchGradeTargetsByBlock(cycle.catalog_id, grade)
+    : new Map()
   const aggregates = buildAggregateFromRows(rows, gradeTargetsByBlock)
 
   return {

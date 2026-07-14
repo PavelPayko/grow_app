@@ -8,13 +8,18 @@ export const USER_GRADES: IUserGrade[] = ['junior', 'middle', 'senior']
 export const USER_ROLE_LABELS: Record<IUserRole, string> = {
   user: 'Сотрудник',
   admin: 'Администратор',
-  lead: 'Лид',
+  lead: 'Руководитель',
 }
 
 export const USER_GRADE_LABELS: Record<IUserGrade, string> = {
   junior: 'Junior',
   middle: 'Middle',
   senior: 'Senior',
+}
+
+export function formatGradeLabel(grade: IUserGrade | null | undefined): string | null {
+  if (!grade) return null
+  return USER_GRADE_LABELS[grade]
 }
 
 export interface IUser {
@@ -27,7 +32,7 @@ export interface IUser {
   role: IUserRole
   team_id: string | null
   team_name?: string | null
-  grade: IUserGrade
+  grade: IUserGrade | null
   job_title?: string | null
   managed_team_ids?: string[]
   created_at: string
@@ -41,7 +46,7 @@ export interface IUserCreate {
   email: string
   role?: IUserRole
   team_id?: string | null
-  grade?: IUserGrade
+  grade?: IUserGrade | null
   job_title?: string | null
   managed_team_ids?: string[]
 }
@@ -52,7 +57,7 @@ export interface IUserUpdate {
   email: string
   role: IUserRole
   team_id?: string | null
-  grade?: IUserGrade
+  grade?: IUserGrade | null
   job_title?: string | null
   managed_team_ids?: string[]
 }

@@ -113,6 +113,7 @@ npm run migrate:users
 | `006_assign_users_to_default_team.sql` | SQL-назначение пользователей в Default Team |
 | `007_decouple_catalog_from_team.sql` | `teams.catalog_id`; удаление `team_id`/`is_active` из каталогов |
 | `008_add_lead_role_and_managed_teams.sql` | роль `lead`, `users.job_title`, таблица `user_managed_teams` |
+| `009_nullable_user_grade.sql` | `users.grade` и `cycle_user_snapshots.grade` nullable (опционально для lead/admin) |
 
 ## npm-скрипты
 

@@ -22,18 +22,21 @@ interface CatalogModalsProps {
   catalog: ICompetencyCatalog | null
   gradeTargetOptions: { value: string; label: string }[]
   catalogModalOpen: boolean
+  editCatalogModalOpen: boolean
   cloneModalOpen: boolean
   blockModal: BlockModalState
   domainModal: DomainModalState
   competencyModal: CompetencyModalState
   gradeTargetModal: GradeTargetModalState
   onCloseCatalog: () => void
+  onCloseEditCatalog: () => void
   onCloseClone: () => void
   onCloseBlock: () => void
   onCloseDomain: () => void
   onCloseCompetency: () => void
   onCloseGradeTarget: () => void
   createCatalogMutation: UseMutationResult<unknown, Error, ICatalogFormValues>
+  updateCatalogMutation: UseMutationResult<unknown, Error, ICatalogFormValues>
   cloneCatalogMutation: UseMutationResult<unknown, Error, ICloneCatalogFormValues>
   blockMutation: UseMutationResult<unknown, Error, IBlockFormValues>
   domainMutation: UseMutationResult<unknown, Error, IDomainFormValues>
@@ -45,18 +48,21 @@ export const CatalogModals: FC<CatalogModalsProps> = ({
   catalog,
   gradeTargetOptions,
   catalogModalOpen,
+  editCatalogModalOpen,
   cloneModalOpen,
   blockModal,
   domainModal,
   competencyModal,
   gradeTargetModal,
   onCloseCatalog,
+  onCloseEditCatalog,
   onCloseClone,
   onCloseBlock,
   onCloseDomain,
   onCloseCompetency,
   onCloseGradeTarget,
   createCatalogMutation,
+  updateCatalogMutation,
   cloneCatalogMutation,
   blockMutation,
   domainMutation,
@@ -80,6 +86,34 @@ export const CatalogModals: FC<CatalogModalsProps> = ({
         layout='vertical'
         onFinish={(values) => createCatalogMutation.mutate(values)}
         initialValues={{ name: 'Каталог компетенций' }}
+      >
+        <Form.Item
+          name='name'
+          label='Название'
+          rules={[{ required: true, message: 'Введите название' }]}
+        >
+          <Input />
+        </Form.Item>
+      </Form>
+    </Modal>
+
+    <Modal
+      title='Переименовать каталог'
+      open={editCatalogModalOpen}
+      onCancel={onCloseEditCatalog}
+      okButtonProps={{
+        htmlType: 'submit',
+        form: 'edit-catalog',
+        loading: updateCatalogMutation.isPending,
+      }}
+      destroyOnHidden
+    >
+      <Form<ICatalogFormValues>
+        key={catalog?.id || 'edit-catalog'}
+        name='edit-catalog'
+        layout='vertical'
+        onFinish={(values) => updateCatalogMutation.mutate(values)}
+        initialValues={{ name: catalog?.name || '' }}
       >
         <Form.Item
           name='name'

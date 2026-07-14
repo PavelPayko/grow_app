@@ -17,6 +17,7 @@ import {
   fetchCatalog,
   fetchCatalogs,
   updateBlock,
+  updateCatalog,
   updateCompetency,
   updateDomain,
   upsertGradeTarget,
@@ -43,6 +44,7 @@ export function useCompetencyCatalog() {
   const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null)
 
   const [catalogModalOpen, setCatalogModalOpen] = useState(false)
+  const [editCatalogModalOpen, setEditCatalogModalOpen] = useState(false)
   const [cloneModalOpen, setCloneModalOpen] = useState(false)
   const [blockModal, setBlockModal] = useState<BlockModalState>(null)
   const [domainModal, setDomainModal] = useState<DomainModalState>(null)
@@ -77,6 +79,17 @@ export function useCompetencyCatalog() {
       message.success('Каталог создан')
       setCatalogModalOpen(false)
       setSelectedCatalogId(newCatalog.id)
+      invalidateCatalog()
+    },
+    onError: (error) => message.error(getApiError(error)),
+  })
+
+  const updateCatalogMutation = useMutation({
+    mutationFn: (values: ICatalogFormValues) =>
+      updateCatalog(activeCatalogId!, values),
+    onSuccess: () => {
+      message.success('Каталог переименован')
+      setEditCatalogModalOpen(false)
       invalidateCatalog()
     },
     onError: (error) => message.error(getApiError(error)),
@@ -225,6 +238,7 @@ export function useCompetencyCatalog() {
     catalogLoading ||
     catalogFetching ||
     createCatalogMutation.isPending ||
+    updateCatalogMutation.isPending ||
     cloneCatalogMutation.isPending ||
     deleteCatalogMutation.isPending ||
     blockMutation.isPending ||
@@ -242,6 +256,8 @@ export function useCompetencyCatalog() {
     isBusy,
     catalogModalOpen,
     setCatalogModalOpen,
+    editCatalogModalOpen,
+    setEditCatalogModalOpen,
     cloneModalOpen,
     setCloneModalOpen,
     blockModal,
@@ -254,6 +270,7 @@ export function useCompetencyCatalog() {
     setGradeTargetModal,
     gradeTargetOptions,
     createCatalogMutation,
+    updateCatalogMutation,
     cloneCatalogMutation,
     deleteCatalogMutation,
     blockMutation,

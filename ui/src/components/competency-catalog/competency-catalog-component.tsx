@@ -55,6 +55,7 @@ export const CompetencyCatalogComponent: FC<ICompetencyCatalogProps> = () => {
         deletePending={catalog.deleteCatalogMutation.isPending}
         onCatalogChange={catalog.setSelectedCatalogId}
         onCreateClick={() => catalog.setCatalogModalOpen(true)}
+        onEditClick={() => catalog.setEditCatalogModalOpen(true)}
         onCloneClick={() => catalog.setCloneModalOpen(true)}
         onDeleteClick={() => catalog.deleteCatalogMutation.mutate()}
       />
@@ -75,18 +76,21 @@ export const CompetencyCatalogComponent: FC<ICompetencyCatalogProps> = () => {
         catalog={catalog.catalog}
         gradeTargetOptions={catalog.gradeTargetOptions}
         catalogModalOpen={catalog.catalogModalOpen}
+        editCatalogModalOpen={catalog.editCatalogModalOpen}
         cloneModalOpen={catalog.cloneModalOpen}
         blockModal={catalog.blockModal}
         domainModal={catalog.domainModal}
         competencyModal={catalog.competencyModal}
         gradeTargetModal={catalog.gradeTargetModal}
         onCloseCatalog={() => catalog.setCatalogModalOpen(false)}
+        onCloseEditCatalog={() => catalog.setEditCatalogModalOpen(false)}
         onCloseClone={() => catalog.setCloneModalOpen(false)}
         onCloseBlock={() => catalog.setBlockModal(null)}
         onCloseDomain={() => catalog.setDomainModal(null)}
         onCloseCompetency={() => catalog.setCompetencyModal(null)}
         onCloseGradeTarget={() => catalog.setGradeTargetModal(null)}
         createCatalogMutation={catalog.createCatalogMutation}
+        updateCatalogMutation={catalog.updateCatalogMutation}
         cloneCatalogMutation={catalog.cloneCatalogMutation}
         blockMutation={catalog.blockMutation}
         domainMutation={catalog.domainMutation}

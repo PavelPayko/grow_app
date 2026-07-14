@@ -8,12 +8,30 @@ const VALID_GRADES = ['junior', 'middle', 'senior']
 
 
 
-function normalizeGrade(grade) {
+function parseGradeValue(grade) {
+  if (grade === null || grade === undefined || grade === '') {
+    return { ok: true, value: null }
+  }
 
-  if (!grade) return 'junior'
+  if (VALID_GRADES.includes(grade)) {
+    return { ok: true, value: grade }
+  }
 
-  return VALID_GRADES.includes(grade) ? grade : null
+  return { ok: false }
+}
 
+function validateGradeForRole(role, grade) {
+  const parsed = parseGradeValue(grade)
+
+  if (!parsed.ok) {
+    return { error: 'Недопустимый грейд. Допустимые значения: junior, middle, senior' }
+  }
+
+  if (role === 'user' && !parsed.value) {
+    return { error: 'Грейд обязателен для роли сотрудника' }
+  }
+
+  return { grade: parsed.value }
 }
 
 
@@ -156,18 +174,14 @@ exports.createUser = async (req, res) => {
 
   const team_id = req.body.team_id || null
 
-  const grade = normalizeGrade(req.body.grade)
-
   const job_title = normalizeJobTitle(req.body.job_title)
 
   const managed_team_ids = normalizeManagedTeamIds(req.body.managed_team_ids)
 
+  const gradeResult = validateGradeForRole(role, req.body.grade)
 
-
-  if (req.body.grade && !grade) {
-
-    return res.status(400).json({ error: 'Недопустимый грейд. Допустимые значения: junior, middle, senior' })
-
+  if (gradeResult.error) {
+    return res.status(400).json({ error: gradeResult.error })
   }
 
 
@@ -186,7 +200,7 @@ exports.createUser = async (req, res) => {
 
       const result = await createUser({
 
-        login, password, full_name, phone, email, role, team_id, grade, job_title, managed_team_ids,
+        login, password, full_name, phone, email, role, team_id, grade: gradeResult.grade, job_title, managed_team_ids,
 
       })
 
@@ -222,18 +236,14 @@ exports.updateUser = async (req, res) => {
 
   const team_id = req.body.team_id || null
 
-  const grade = normalizeGrade(req.body.grade)
-
   const job_title = normalizeJobTitle(req.body.job_title)
 
   const managed_team_ids = normalizeManagedTeamIds(req.body.managed_team_ids)
 
+  const gradeResult = validateGradeForRole(role, req.body.grade)
 
-
-  if (req.body.grade && !grade) {
-
-    return res.status(400).json({ error: 'Недопустимый грейд. Допустимые значения: junior, middle, senior' })
-
+  if (gradeResult.error) {
+    return res.status(400).json({ error: gradeResult.error })
   }
 
 
@@ -242,7 +252,7 @@ exports.updateUser = async (req, res) => {
 
     const result = await updateUser({
 
-      id, full_name, email, phone, role, team_id, grade, job_title, managed_team_ids,
+      id, full_name, email, phone, role, team_id, grade: gradeResult.grade, job_title, managed_team_ids,
 
     })
 
