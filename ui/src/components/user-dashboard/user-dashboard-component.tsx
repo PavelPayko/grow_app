@@ -56,19 +56,21 @@ export const UserDashboardComponent: FC<IUserDashboardProps> = ({ userId }) => {
     <Flex vertical gap={24}>
       <Flex vertical gap={12}>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          ИПР
+          Компетенции
         </Typography.Title>
-        <IprSection userId={userId} />
+        <CompetencySection userId={userId} teamId={targetUser?.team_id} />
       </Flex>
 
       <Divider />
 
       <Flex vertical gap={12}>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          Компетенции
+          ИПР
         </Typography.Title>
-        <CompetencySection userId={userId} teamId={targetUser?.team_id} />
+        <IprSection userId={userId} />
       </Flex>
+
+      <Divider />
 
       {showManagerInsight && (
         <ManagerInsightPanel aggregates={aggregates ?? null} history={history} />
